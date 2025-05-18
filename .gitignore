@@ -1,2 +1,4 @@
+/.vscode
 /otelcol-dev
 /dist
+.env

@@ -7,12 +7,31 @@ This project implements an OpenTelemetry receiver for Solace, enabling the recep
 - Go 1.24.2 or higher
 - Access to a Solace Message Broker
 - OpenTelemetry Collector
+- Datadog API Key (for Datadog export)
 
 ## Installation
 
 ```bash
 go get github.com/ThinkportRepo/opentelemetry-solace-oltp
 ```
+
+## Environment Variables
+
+The project includes a `.env.dist` file as a template for configuration. To set up the environment variables:
+
+1. Copy the `.env.dist` file:
+```bash
+cp .env.dist .env
+```
+
+2. Edit the `.env` file and replace the placeholders with your values:
+```bash
+# Datadog Configuration
+DD_API_KEY=your_datadog_api_key_here
+DD_SITE=datadoghq.eu  # For EU region, alternatively datadoghq.com for US region
+```
+
+The `.env` file is already listed in `.gitignore` and will not be committed to the repository. The `.env.dist` file serves as a template and documentation for the required environment variables.
 
 ## Building with OCB
 
@@ -70,29 +89,40 @@ receivers:
     password: "default"
 
 exporters:
-  otlp:
-    endpoint: "localhost:4317"
-    tls:
-      insecure: true
+  datadog:
+    api:
+      key: ${DD_API_KEY}  # Read from environment variable
+      site: ${DD_SITE}    # Read from environment variable
+    host_metadata:
+      enabled: true
+    metrics:
+      endpoint: https://api.${DD_SITE}
+    traces:
+      endpoint: https://trace.agent.${DD_SITE}
+    logs:
+      endpoint: https://http-intake.logs.${DD_SITE}
 
 service:
   pipelines:
     traces:
       receivers: [solace]
-      exporters: [otlp]
+      exporters: [datadog]
 ```
 
 ## Usage
 
-1. Configure the receiver in your OpenTelemetry Collector configuration
-2. Start the OpenTelemetry Collector
-3. The receiver will now receive telemetry data from your Solace Message Broker
+1. Create the `.env` file with your Datadog API Key and desired Datadog Site
+2. Configure the receiver in your OpenTelemetry Collector configuration
+3. Start the OpenTelemetry Collector
+4. The receiver will now receive telemetry data from your Solace Message Broker
 
 ## Starting the Collector
 
 To start the OpenTelemetry Collector, run the following command:
 
 ```bash
+# Ensure environment variables are loaded
+source .env
 ./otelcol-dev/otelcol-dev --config collector-config.yaml
 ```
 
