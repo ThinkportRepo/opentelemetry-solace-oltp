@@ -1,7 +1,7 @@
 .PHONY: build start debug docker-build docker-build-local docker-push
 
-# Include environment variables from .env file
-include .env
+# Include environment variables from .env file if it exists
+-include .env
 export
 
 # Build the OpenTelemetry Collector

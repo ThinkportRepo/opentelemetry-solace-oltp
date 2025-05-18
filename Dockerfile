@@ -6,9 +6,9 @@ ARG OCB_VERSION=v0.126.0
 # Install build dependencies
 RUN apk add --no-cache make git curl
 
-# Download OCB binary for the correct platform
+# Download OCB binary for Linux
 RUN curl --proto '=https' --tlsv1.2 -fL -o /usr/local/bin/ocb \
-    https://github.com/open-telemetry/opentelemetry-collector-releases/releases/download/cmd%2Fbuilder%2Fv0.126.0/ocb_0.126.0_$(uname -s | tr '[:upper:]' '[:lower:]')_$(uname -m | sed 's/x86_64/amd64/') && \
+    https://github.com/open-telemetry/opentelemetry-collector-releases/releases/download/cmd%2Fbuilder%2Fv0.126.0/ocb_0.126.0_linux_amd64 && \
     chmod +x /usr/local/bin/ocb
 
 # Set working directory
