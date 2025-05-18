@@ -88,6 +88,63 @@ service:
 2. Start the OpenTelemetry Collector
 3. The receiver will now receive telemetry data from your Solace Message Broker
 
+## Starting the Collector
+
+To start the OpenTelemetry Collector, run the following command:
+
+```bash
+./otelcol-dev/otelcol-dev --config collector-config.yaml
+```
+
+This command starts the collector with the specified configuration file `collector-config.yaml`.
+
+## Debugging the Collector
+
+To debug the collector, you can enable debug output by modifying the `collector-config.yaml` file. Ensure that the debug exporter is enabled by checking the following line in the configuration file:
+
+```yaml
+exporters:
+  debug:
+    verbosity: detailed
+```
+
+If you need additional debugging options, you can also adjust the logging configuration to get more detailed information.
+
+### Example Logging Configuration
+
+Add the following line to `collector-config.yaml` to increase the logging level:
+
+```yaml
+service:
+  telemetry:
+    logs:
+      level: debug
+```
+
+After adjusting the configuration, restart the collector to see the debug output.
+
+## Make Tasks
+
+The project includes a Makefile with the following tasks:
+
+### Build
+```bash
+make build
+```
+Builds the OpenTelemetry Collector with the specified configuration in `builder-config.yaml`.
+
+### Start
+```bash
+make start
+```
+Starts the OpenTelemetry Collector with the configuration from `collector-config.yaml`.
+
+### Debug
+```bash
+make debug
+```
+Starts the OpenTelemetry Collector in debug mode with increased logging level.
+
 ## License
 
 [Add license information here]
@@ -98,39 +155,4 @@ Contributions are welcome! Please create a Pull Request or open an Issue for sug
 
 ## Support
 
-For questions or issues, please create an Issue in this repository.
-
-## Starten des Collectors
-
-Um den OpenTelemetry Collector zu starten, führen Sie den folgenden Befehl aus:
-
-```bash
-./otelcol-dev/otelcol-dev --config collector-config.yaml
-```
-
-Dieser Befehl startet den Collector mit der angegebenen Konfigurationsdatei `collector-config.yaml`.
-
-## Debuggen des Collectors
-
-Um den Collector zu debuggen, können Sie die Debug-Ausgabe aktivieren, indem Sie die Konfigurationsdatei `collector-config.yaml` anpassen. Stellen Sie sicher, dass der Debug-Exporter aktiviert ist, indem Sie die folgende Zeile in der Konfigurationsdatei überprüfen:
-
-```yaml
-exporters:
-  debug:
-    verbosity: detailed
-```
-
-Wenn Sie weitere Debugging-Optionen benötigen, können Sie auch die Logging-Konfiguration anpassen, um detailliertere Informationen zu erhalten. 
-
-### Beispiel für die Logging-Konfiguration
-
-Fügen Sie die folgende Zeile in die `collector-config.yaml` ein, um die Logging-Stufe zu erhöhen:
-
-```yaml
-service:
-  telemetry:
-    logs:
-      level: debug
-```
-
-Nachdem Sie die Konfiguration angepasst haben, starten Sie den Collector erneut, um die Debug-Ausgabe zu sehen. 
+For questions or issues, please create an Issue in this repository. 
