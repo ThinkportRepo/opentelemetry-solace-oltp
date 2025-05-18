@@ -21,10 +21,15 @@ jobs:
         with:
           fetch-depth: 0
 
+      - name: Sync tags
+        run: |
+          git fetch --tags --force
+          git tag -l | xargs git tag -d
+          git fetch --tags
+
       - name: Get latest tag
         id: get_tag
         run: |
-          git fetch --tags
           echo "tag=$(git describe --tags --abbrev=0 | sed 's/^v//')" >> $GITHUB_OUTPUT
 
       - name: Set up Go
@@ -74,10 +79,15 @@ jobs:
         with:
           fetch-depth: 0
 
+      - name: Sync tags
+        run: |
+          git fetch --tags --force
+          git tag -l | xargs git tag -d
+          git fetch --tags
+
       - name: Get latest tag
         id: get_tag
         run: |
-          git fetch --tags
           echo "tag=$(git describe --tags --abbrev=0 | sed 's/^v//')" >> $GITHUB_OUTPUT
 
       - name: Set up Go
