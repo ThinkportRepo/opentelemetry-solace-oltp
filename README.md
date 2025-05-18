@@ -147,7 +147,7 @@ Starts the OpenTelemetry Collector in debug mode with increased logging level.
 
 ## License
 
-[Add license information here]
+This project is licensed under the GNU GENERAL PUBLIC LICENSE - see the [LICENSE](LICENSE) file for details.
 
 ## Contributing
 
