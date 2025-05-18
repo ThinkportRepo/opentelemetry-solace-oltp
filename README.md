@@ -28,7 +28,11 @@ dist:
   otelcol_version: 0.96.0
 
 receivers:
-  - gomod: github.com/ThinkportRepo/opentelemetry-solace-oltp v0.0.1
+  # Use the latest version from main branch
+  - gomod: github.com/ThinkportRepo/opentelemetry-solace-oltp
+
+  # Alternatively, if you want to use a specific version, create a release tag first
+  # - gomod: github.com/ThinkportRepo/opentelemetry-solace-oltp v0.0.1
 
 processors:
   - gomod: go.opentelemetry.io/collector/processor/batchprocessor v0.96.0
@@ -48,6 +52,10 @@ ocb --config builder-config.yaml
 ```
 
 The resulting binary will be available in the `./dist` directory.
+
+Note: If you want to use a specific version of the receiver, you need to:
+1. Create a release tag in the repository (e.g., v0.0.1)
+2. Update the version in the builder-config.yaml accordingly
 
 ## Configuration
 
