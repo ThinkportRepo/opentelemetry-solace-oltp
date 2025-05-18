@@ -105,6 +105,6 @@ jobs:
 
       - name: Build and push Docker image
         run: |
-          docker build -t ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ steps.get_tag.outputs.tag }}-windows -t ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:windows-latest -f Dockerfile.windows .
-          docker push ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ steps.get_tag.outputs.tag }}-windows
+          docker build -t ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:windows-${{ steps.get_tag.outputs.tag }} -t ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:windows-latest -f Dockerfile.windows .
+          docker push ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:windows-${{ steps.get_tag.outputs.tag }}
           docker push ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:windows-latest 
