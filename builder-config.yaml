@@ -4,7 +4,7 @@ dist:
   output_path: ./oltp-solace
 
 receivers:
-  - gomod: github.com/edeka-digital/opentelemetry-solace-oltp v0.0.1
+  - gomod: github.com/ThinkportRepo/opentelemetry-solace-oltp v0.0.1
 
 exporters:
   - gomod: go.opentelemetry.io/collector/exporter/otlpexporter v0.102.1

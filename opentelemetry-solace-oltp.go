@@ -1,4 +1,4 @@
-package solacetracereceiver
+package solacetraceoltp
 
 import (
 	"context"

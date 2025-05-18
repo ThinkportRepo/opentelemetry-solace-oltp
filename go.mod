@@ -1,3 +1,3 @@
-module github.com/edeka-digita/opentelemetry-solace-oltp
+module github.com/ThinkportRepo/opentelemetry-solace-oltp
 
 go 1.24.2

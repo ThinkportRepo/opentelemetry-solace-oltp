@@ -1,4 +1,4 @@
-package solacetracereceiver
+package solacetraceoltp
 
 import (
 	"github.com/open-telemetry/opentelemetry-collector/receiver"
