@@ -9,6 +9,7 @@ CURRENT_VERSION := $(shell git describe --tags --abbrev=0 2>/dev/null | sed 's/^
 
 version-major:
 	@echo "Current version: $(CURRENT_VERSION)"
+	@git fetch --tags
 	@NEW_VERSION=$$(echo $(CURRENT_VERSION) | awk -F. '{print $$1+1".0.0"}'); \
 	echo "New version: $$NEW_VERSION"; \
 	git tag -a "v$$NEW_VERSION" -m "Release v$$NEW_VERSION"; \
@@ -17,6 +18,7 @@ version-major:
 
 version-minor:
 	@echo "Current version: $(CURRENT_VERSION)"
+	@git fetch --tags
 	@NEW_VERSION=$$(echo $(CURRENT_VERSION) | awk -F. '{print $$1"."$$2+1".0"}'); \
 	echo "New version: $$NEW_VERSION"; \
 	git tag -a "v$$NEW_VERSION" -m "Release v$$NEW_VERSION"; \
@@ -25,6 +27,7 @@ version-minor:
 
 version-patch:
 	@echo "Current version: $(CURRENT_VERSION)"
+	@git fetch --tags
 	@NEW_VERSION=$$(echo $(CURRENT_VERSION) | awk -F. '{print $$1"."$$2"."$$3+1}'); \
 	echo "New version: $$NEW_VERSION"; \
 	git tag -a "v$$NEW_VERSION" -m "Release v$$NEW_VERSION"; \
