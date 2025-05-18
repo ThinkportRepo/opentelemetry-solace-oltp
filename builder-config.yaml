@@ -1,13 +1,18 @@
 dist:
-  name: oltp-solace
-  description: Custom OpenTelemetry Collector with Solace Trace Receiver in OTLP format
-  output_path: ./oltp-solace
+  name: otelcol-solace
+  description: "OpenTelemetry Collector with Solace Receiver"
+  output_path: ./dist
+  otelcol_version: 0.102.1
 
 receivers:
-  - gomod: github.com/ThinkportRepo/opentelemetry-solace-oltp v0.0.1
-
-exporters:
-  - gomod: go.opentelemetry.io/collector/exporter/otlpexporter v0.102.1
+  - gomod: ./
 
 processors:
   - gomod: go.opentelemetry.io/collector/processor/batchprocessor v0.102.1
+
+exporters:
+  - gomod: go.opentelemetry.io/collector/exporter/otlpexporter v0.102.1
+  - gomod: go.opentelemetry.io/collector/exporter/loggingexporter v0.102.1
+
+extensions:
+  - gomod: go.opentelemetry.io/collector/extension/healthcheckextension v0.102.1

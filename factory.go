@@ -1,31 +1,31 @@
 package solacetraceoltp
 
 import (
-	"github.com/open-telemetry/opentelemetry-collector/receiver"
+	"context"
+
 	"go.opentelemetry.io/collector/component"
-	"go.opentelemetry.io/collector/config"
+	"go.opentelemetry.io/collector/consumer"
+	"go.opentelemetry.io/collector/receiver"
 )
 
 func NewFactory() receiver.Factory {
+	typ := component.MustNewType("solace")
 	return receiver.NewFactory(
-		"solacetrace",
+		typ,
 		createDefaultConfig,
-		receiver.WithTraces(createTracesReceiver),
+		receiver.WithTraces(createTracesReceiver, component.StabilityLevelDevelopment),
 	)
 }
 
-func createDefaultConfig() config.Receiver {
-	return &Config{
-		ReceiverSettings: config.NewReceiverSettings(config.NewComponentID("solacetrace")),
-		// Setze hier Standardwerte für die Konfiguration
-	}
+func createDefaultConfig() component.Config {
+	return &Config{}
 }
 
 func createTracesReceiver(
 	ctx context.Context,
-	settings receiver.CreateSettings,
-	cfg config.Receiver,
+	settings receiver.Settings,
+	cfg component.Config,
 	nextConsumer consumer.Traces,
 ) (receiver.Traces, error) {
-	return newSolaceTraceReceiver(cfg.(*Config), nextConsumer)
+	return &solaceTraceReceiver{consumer: nextConsumer}, nil
 }
