@@ -6,7 +6,7 @@ on:
 
 env:
   REGISTRY: ghcr.io
-  IMAGE_NAME: thinkportrepo/opentelemetry-solace-oltp
+  IMAGE_NAME: thinkportrepo/opentelemetry-solace-otlp
 
 jobs:
   build-and-push-linux:
