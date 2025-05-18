@@ -1,0 +1,84 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: otel-collector-config
+data:
+  collector-config.yaml: |
+    receivers:
+      otlp:
+        protocols:
+          grpc:
+            endpoint: 0.0.0.0:4319
+          http:
+            endpoint: 0.0.0.0:4318
+      hostmetrics:
+        collection_interval: 10s
+        scrapers:
+          cpu: {}
+          memory: {}
+          disk: {}
+          filesystem: {}
+          load: {}
+          network: {}
+          paging: {}
+          processes: {}
+
+    processors:
+      batch:
+        send_batch_size: 1000
+        timeout: 10s
+      memory_limiter:
+        check_interval: 1s
+        limit_mib: 1500
+        spike_limit_mib: 512
+      resource:
+        attributes:
+          - key: host.name
+            value: solaccer
+            action: upsert
+          - key: service.name
+            value: otel-collector
+            action: upsert
+          - key: deployment.environment
+            value: development
+            action: upsert
+
+    exporters:
+      debug:
+        verbosity: detailed
+      datadog:
+        api:
+          key: ${DD_API_KEY}
+          site: ${DD_SITE}
+        host_metadata:
+          enabled: true
+        metrics:
+          endpoint: https://api.${DD_SITE}
+          resource_attributes_as_tags: true
+        traces:
+          endpoint: https://trace.agent.${DD_SITE}
+          trace_buffer: 10000
+          span_name_remappings:
+            service.name: service
+        logs:
+          endpoint: https://http-intake.logs.${DD_SITE}
+          use_compression: true
+          compression_level: 6
+
+    service:
+      telemetry:
+        logs:
+          level: info
+      pipelines:
+        traces:
+          receivers: [otlp]
+          processors: [memory_limiter, resource, batch]
+          exporters: [debug, datadog]
+        metrics:
+          receivers: [otlp, hostmetrics]
+          processors: [memory_limiter, resource, batch]
+          exporters: [debug, datadog]
+        logs:
+          receivers: [otlp]
+          processors: [memory_limiter, resource, batch]
+          exporters: [debug, datadog] 

@@ -1,0 +1,48 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: otel-collector
+  labels:
+    app: otel-collector
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: otel-collector
+  template:
+    metadata:
+      labels:
+        app: otel-collector
+    spec:
+      containers:
+      - name: otel-collector
+        image: ghcr.io/ThinkportRepo/opentelemetry-receiver-solace:latest
+        imagePullPolicy: Always
+        ports:
+        - containerPort: 4317
+          name: otlp-grpc
+        - containerPort: 4318
+          name: otlp-http
+        - containerPort: 8888
+          name: metrics
+        envFrom:
+        - secretRef:
+            name: otel-collector-secrets
+        volumeMounts:
+        - name: otel-collector-config
+          mountPath: /conf
+        command:
+        - "/otelcol-solace"
+        args:
+        - "--config=/conf/collector-config.yaml"
+        resources:
+          limits:
+            cpu: 1
+            memory: 2Gi
+          requests:
+            cpu: 200m
+            memory: 400Mi
+      volumes:
+      - name: otel-collector-config
+        configMap:
+          name: otel-collector-config 
