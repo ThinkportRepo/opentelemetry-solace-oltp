@@ -1,0 +1,13 @@
+dist:
+  name: otelcol-custom
+  description: Custom OpenTelemetry Collector with Solace Trace Receiver
+  output_path: ./otelcol-custom
+
+receivers:
+  - gomod: github.com/edeka-digital/opentelemetry-receiver-solace v0.0.1
+
+exporters:
+  - gomod: go.opentelemetry.io/collector/exporter/otlpexporter v0.102.1
+
+processors:
+  - gomod: go.opentelemetry.io/collector/processor/batchprocessor v0.102.1
