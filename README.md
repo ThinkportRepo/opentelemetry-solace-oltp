@@ -98,4 +98,39 @@ Contributions are welcome! Please create a Pull Request or open an Issue for sug
 
 ## Support
 
-For questions or issues, please create an Issue in this repository. 
+For questions or issues, please create an Issue in this repository.
+
+## Starten des Collectors
+
+Um den OpenTelemetry Collector zu starten, führen Sie den folgenden Befehl aus:
+
+```bash
+./otelcol-dev/otelcol-dev --config collector-config.yaml
+```
+
+Dieser Befehl startet den Collector mit der angegebenen Konfigurationsdatei `collector-config.yaml`.
+
+## Debuggen des Collectors
+
+Um den Collector zu debuggen, können Sie die Debug-Ausgabe aktivieren, indem Sie die Konfigurationsdatei `collector-config.yaml` anpassen. Stellen Sie sicher, dass der Debug-Exporter aktiviert ist, indem Sie die folgende Zeile in der Konfigurationsdatei überprüfen:
+
+```yaml
+exporters:
+  debug:
+    verbosity: detailed
+```
+
+Wenn Sie weitere Debugging-Optionen benötigen, können Sie auch die Logging-Konfiguration anpassen, um detailliertere Informationen zu erhalten. 
+
+### Beispiel für die Logging-Konfiguration
+
+Fügen Sie die folgende Zeile in die `collector-config.yaml` ein, um die Logging-Stufe zu erhöhen:
+
+```yaml
+service:
+  telemetry:
+    logs:
+      level: debug
+```
+
+Nachdem Sie die Konfiguration angepasst haben, starten Sie den Collector erneut, um die Debug-Ausgabe zu sehen. 

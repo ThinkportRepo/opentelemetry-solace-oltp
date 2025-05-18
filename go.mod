@@ -1,6 +1,8 @@
 module github.com/ThinkportRepo/opentelemetry-solace-oltp
 
-go 1.24.2
+go 1.23.0
+
+toolchain go1.24.2
 
 require (
 	go.opentelemetry.io/collector/component v1.32.0
