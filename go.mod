@@ -1,4 +1,4 @@
-module github.com/ThinkportRepo/opentelemetry-solace-oltp
+module github.com/ThinkportRepo/opentelemetry-solace-otlp
 
 go 1.23.0
 

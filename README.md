@@ -12,7 +12,7 @@ This project implements an OpenTelemetry receiver for Solace, enabling the recep
 ## Installation
 
 ```bash
-go get github.com/ThinkportRepo/opentelemetry-solace-oltp
+go get github.com/ThinkportRepo/opentelemetry-solace-otlp
 ```
 
 ## Environment Variables
@@ -48,10 +48,10 @@ dist:
 
 receivers:
   # Use the latest version from main branch
-  - gomod: github.com/ThinkportRepo/opentelemetry-solace-oltp
+  - gomod: github.com/ThinkportRepo/opentelemetry-solace-otlp
 
   # Alternatively, if you want to use a specific version, create a release tag first
-  # - gomod: github.com/ThinkportRepo/opentelemetry-solace-oltp v0.0.1
+  # - gomod: github.com/ThinkportRepo/opentelemetry-solace-otlp v0.0.1
 
 processors:
   - gomod: go.opentelemetry.io/collector/processor/batchprocessor v0.96.0

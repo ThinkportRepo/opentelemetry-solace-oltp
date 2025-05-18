@@ -1,4 +1,4 @@
-package solacetraceoltp
+package solacetraceotlp
 
 import (
 	"context"
