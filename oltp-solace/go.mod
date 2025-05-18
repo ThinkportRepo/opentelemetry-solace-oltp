@@ -10,7 +10,7 @@ require (
 	go.opentelemetry.io/collector/confmap/provider/httpprovider v1.32.0
 	go.opentelemetry.io/collector/confmap/provider/httpsprovider v1.32.0
 	go.opentelemetry.io/collector/confmap/provider/yamlprovider v1.32.0
-	github.com/edeka-digital/opentelemetry-solace-oltp v0.0.1
+	github.com/ThinkportRepo/opentelemetry-solace-oltp v0.0.1
 	go.opentelemetry.io/collector/exporter/otlpexporter v0.102.1
 	go.opentelemetry.io/collector/processor/batchprocessor v0.102.1
 	go.opentelemetry.io/collector/otelcol v0.126.0

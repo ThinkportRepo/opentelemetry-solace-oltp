@@ -12,7 +12,7 @@ import (
 	"go.opentelemetry.io/collector/receiver"
 	otlpexporter "go.opentelemetry.io/collector/exporter/otlpexporter"
 	batchprocessor "go.opentelemetry.io/collector/processor/batchprocessor"
-	opentelemetry-solace-oltp "github.com/edeka-digital/opentelemetry-solace-oltp"
+	opentelemetry-solace-oltp "github.com/ThinkportRepo/opentelemetry-solace-oltp"
 )
 
 func components() (otelcol.Factories, error) {
@@ -33,7 +33,7 @@ func components() (otelcol.Factories, error) {
 		return otelcol.Factories{}, err
 	}
 	factories.ReceiverModules = make(map[component.Type]string, len(factories.Receivers))
-	factories.ReceiverModules[opentelemetry-solace-oltp.NewFactory().Type()] = "github.com/edeka-digital/opentelemetry-solace-oltp v0.0.1"
+	factories.ReceiverModules[opentelemetry-solace-oltp.NewFactory().Type()] = "github.com/ThinkportRepo/opentelemetry-solace-oltp v0.0.1"
 
 	factories.Exporters, err = otelcol.MakeFactoryMap[exporter.Factory](
 		otlpexporter.NewFactory(),
