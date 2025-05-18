@@ -12,21 +12,24 @@ version-major:
 	@NEW_VERSION=$$(echo $(CURRENT_VERSION) | awk -F. '{print $$1+1".0.0"}'); \
 	echo "New version: $$NEW_VERSION"; \
 	git tag -a "v$$NEW_VERSION" -m "Release v$$NEW_VERSION"; \
-	echo "Created tag v$$NEW_VERSION"
+	git push --tags; \
+	echo "Created and pushed tag v$$NEW_VERSION"
 
 version-minor:
 	@echo "Current version: $(CURRENT_VERSION)"
 	@NEW_VERSION=$$(echo $(CURRENT_VERSION) | awk -F. '{print $$1"."$$2+1".0"}'); \
 	echo "New version: $$NEW_VERSION"; \
 	git tag -a "v$$NEW_VERSION" -m "Release v$$NEW_VERSION"; \
-	echo "Created tag v$$NEW_VERSION"
+	git push --tags; \
+	echo "Created and pushed tag v$$NEW_VERSION"
 
 version-patch:
 	@echo "Current version: $(CURRENT_VERSION)"
 	@NEW_VERSION=$$(echo $(CURRENT_VERSION) | awk -F. '{print $$1"."$$2"."$$3+1}'); \
 	echo "New version: $$NEW_VERSION"; \
 	git tag -a "v$$NEW_VERSION" -m "Release v$$NEW_VERSION"; \
-	echo "Created tag v$$NEW_VERSION"
+	git push --tags; \
+	echo "Created and pushed tag v$$NEW_VERSION"
 
 # Build the OpenTelemetry Collector
 build:
