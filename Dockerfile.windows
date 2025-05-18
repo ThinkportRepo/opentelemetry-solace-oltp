@@ -2,6 +2,7 @@
 FROM golang:1.24.2-windowsservercore-ltsc2019 AS builder
 
 ARG OCB_VERSION=v0.126.0
+ARG WINDOWS_VERSION=1809
 
 # Install build dependencies
 RUN powershell -Command "Set-ExecutionPolicy Bypass -Scope Process -Force; [System.Net.ServicePointManager]::SecurityProtocol = [System.Net.ServicePointManager]::SecurityProtocol -bor 3072; iex ((New-Object System.Net.WebClient).DownloadString('https://chocolatey.org/install.ps1'))"
