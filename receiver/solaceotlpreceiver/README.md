@@ -1,6 +1,6 @@
 # Solace OTLP Receiver
 
-![Coverage](./coverage.svg)
+[![Coverage](https://raw.githubusercontent.com/edeka-digital/opentelemetry-receiver-solace/main/coverage.json)](https://github.com/edeka-digital/opentelemetry-receiver-solace)
 
 This receiver enables receiving OpenTelemetry data via Solace Message Broker.
 
