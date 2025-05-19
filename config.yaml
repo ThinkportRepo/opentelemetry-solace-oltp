@@ -1,0 +1,16 @@
+receivers:
+  solaceotlp:
+    endpoint: "tcp://localhost:5672"
+    queue: "telemetry-queue"
+    username: "default"
+    password: "default"
+
+exporters:
+  debug:
+    verbosity: detailed
+
+service:
+  pipelines:
+    traces:
+      receivers: [solaceotlp]
+      exporters: [debug] 
