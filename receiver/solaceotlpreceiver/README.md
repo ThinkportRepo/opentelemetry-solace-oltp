@@ -1,5 +1,7 @@
 # Solace OTLP Receiver
 
+![Coverage](./coverage.svg)
+
 This receiver enables receiving OpenTelemetry data via Solace Message Broker.
 
 ## Status
