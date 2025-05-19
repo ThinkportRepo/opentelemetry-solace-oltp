@@ -30,12 +30,16 @@ jobs:
       - name: Get latest tag
         id: get_tag
         run: |
-          echo "tag=$(git describe --tags --abbrev=0 | sed 's/^v//')" >> $GITHUB_OUTPUT
+          if git describe --tags --abbrev=0 2>/dev/null; then
+            echo "tag=$(git describe --tags --abbrev=0 | sed 's/^v//')" >> $GITHUB_OUTPUT
+          else
+            echo "tag=dev" >> $GITHUB_OUTPUT
+          fi
 
       - name: Set up Go
         uses: actions/setup-go@v5
         with:
-          go-version: '1.24.2'
+          go-version: '1.22.1'
           cache: true
 
       - name: Set up Docker Buildx
@@ -88,12 +92,16 @@ jobs:
       - name: Get latest tag
         id: get_tag
         run: |
-          echo "tag=$(git describe --tags --abbrev=0 | sed 's/^v//')" >> $GITHUB_OUTPUT
+          if git describe --tags --abbrev=0 2>/dev/null; then
+            echo "tag=$(git describe --tags --abbrev=0 | sed 's/^v//')" >> $GITHUB_OUTPUT
+          else
+            echo "tag=dev" >> $GITHUB_OUTPUT
+          fi
 
       - name: Set up Go
         uses: actions/setup-go@v5
         with:
-          go-version: '1.24.2'
+          go-version: '1.22.1'
           cache: true
 
       - name: Log in to the Container registry
