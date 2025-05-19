@@ -28,6 +28,8 @@ receivers:
       github.com/open-telemetry/opentelemetry-collector-contrib/receiver/filelogreceiver v0.126.0
   - gomod:
       github.com/open-telemetry/opentelemetry-collector-contrib/receiver/httpcheckreceiver v0.126.0
+  - gomod:
+      github.com/ThinkportRepo/opentelemetry-solace-otlp/receiver/solaceotlpreceiver main
 
 providers:
   - gomod: go.opentelemetry.io/collector/confmap/provider/envprovider v1.18.0
