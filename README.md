@@ -1,6 +1,6 @@
 # OpenTelemetry Solace OTLP
 
-[![Coverage](https://raw.githubusercontent.com/edeka-digital/opentelemetry-receiver-solace/main/coverage.json)](https://github.com/edeka-digital/opentelemetry-receiver-solace)
+[![Coverage](https://raw.githubusercontent.com/ThinkportRepo/opentelemetry-solace-otlp/main/coverage.json)](https://github.com/ThinkportRepo/opentelemetry-solace-otlp)
 
 This project is a custom OpenTelemetry Collector with a receiver for Solace OTLP.
 
