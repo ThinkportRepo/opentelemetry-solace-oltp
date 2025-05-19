@@ -1,4 +1,4 @@
-.PHONY: build start debug docker-build docker-build-local docker-push version-major version-minor version-patch test-spans stop check help kill
+.PHONY: build start debug docker-build docker-build-local docker-push version-major version-minor version-patch test-spans stop check help kill generate-mocks test
 
 # Colors for output
 BLUE := \033[0;34m
@@ -30,6 +30,8 @@ help:
 	@echo "${GREEN}version-major${NC}      - Increment major version"
 	@echo "${GREEN}version-minor${NC}      - Increment minor version"
 	@echo "${GREEN}version-patch${NC}      - Increment patch version"
+	@echo "${GREEN}generate-mocks${NC}     - Generate mocks for tests"
+	@echo "${GREEN}test${NC}               - Run Go-Tests"
 
 version-major:
 	@echo "${BLUE}Current version:${NC} $(CURRENT_VERSION)"
@@ -139,3 +141,15 @@ kill:
 	-lsof -ti :4317 | xargs -r kill -9
 	-lsof -ti :4318 | xargs -r kill -9
 	@echo "Done."
+
+generate-mocks:
+	go install github.com/golang/mock/mockgen@v1.6.0
+	mockgen -source=receiver/solaceotlpreceiver/internal/mocks/messaging_service.go -destination=receiver/solaceotlpreceiver/internal/mocks/mock_messaging_service.go -package=mocks
+	mockgen -source=receiver/solaceotlpreceiver/internal/mocks/queue_consumer.go -destination=receiver/solaceotlpreceiver/internal/mocks/mock_queue_consumer.go -package=mocks
+	mockgen -source=receiver/solaceotlpreceiver/internal/mocks/queue_consumer_builder.go -destination=receiver/solaceotlpreceiver/internal/mocks/mock_queue_consumer_builder.go -package=mocks
+	mockgen -source=receiver/solaceotlpreceiver/internal/mocks/inbound_message.go -destination=receiver/solaceotlpreceiver/internal/mocks/mock_inbound_message.go -package=mocks
+
+test:
+	@echo "${BLUE}Running Go-Tests … ${NC}"
+	@go test ./... -v
+	@echo "${GREEN}Tests abgeschlossen${NC}"
