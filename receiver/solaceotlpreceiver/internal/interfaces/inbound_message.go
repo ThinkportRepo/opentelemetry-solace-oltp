@@ -76,8 +76,4 @@ type InboundMessage interface {
 	IsRedelivered() bool
 	// String returns a string representation of the message
 	String() string
-	// GetCacheRequestID returns the cache request ID
-	GetCacheRequestID() (message.CacheRequestID, bool)
-	// GetCacheStatus returns the cache status
-	GetCacheStatus() message.CacheStatus
 }

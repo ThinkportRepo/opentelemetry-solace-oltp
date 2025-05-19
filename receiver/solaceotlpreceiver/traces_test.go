@@ -13,7 +13,6 @@ import (
 	"go.opentelemetry.io/collector/consumer"
 	"go.opentelemetry.io/collector/consumer/consumertest"
 	"go.opentelemetry.io/collector/receiver"
-	"solace.dev/go/messaging/pkg/solace/message"
 	"solace.dev/go/messaging/pkg/solace/resource"
 )
 
@@ -21,12 +20,12 @@ func TestTracesReceiver_StartShutdown(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 
-	// Mock-Setup
+	// Mock setup
 	mockMessagingService := mocks.NewMockMessagingService(ctrl)
 	mockQueueConsumer := mocks.NewMockQueueConsumer(ctrl)
 	mockQueueConsumerBuilder := mocks.NewMockQueueConsumerBuilder(ctrl)
 
-	// Konfiguration
+	// Configuration
 	cfg := &solaceotlpreceiver.Config{
 		Endpoint: "tcp://localhost:55555",
 		Queue:    "test-queue",
@@ -34,7 +33,7 @@ func TestTracesReceiver_StartShutdown(t *testing.T) {
 		Password: "pass",
 	}
 
-	// Consumer und Settings
+	// Consumer and settings
 	consumer := consumertest.NewNop()
 	settings := receiver.CreateSettings{
 		ID:                component.NewID("solaceotlp"),
@@ -42,7 +41,7 @@ func TestTracesReceiver_StartShutdown(t *testing.T) {
 		BuildInfo:         component.BuildInfo{},
 	}
 
-	// Erwartetes Verhalten
+	// Expected behavior
 	mockMessagingService.EXPECT().
 		Connect().
 		Return(nil)
@@ -75,7 +74,7 @@ func TestTracesReceiver_StartShutdown(t *testing.T) {
 		Disconnect().
 		Return(nil)
 
-	// Receiver erstellen
+	// Create receiver
 	recv, err := solaceotlpreceiver.NewTracesReceiver(settings, cfg, consumer, mockMessagingService)
 	require.NoError(t, err)
 	require.NotNil(t, recv)
@@ -95,10 +94,10 @@ func TestTracesReceiver_HandleMessage(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 
-	// Mock-Setup
+	// Mock setup
 	mockInboundMessage := mocks.NewMockInboundMessage(ctrl)
 
-	// Test-Payload
+	// Test payload
 	testPayload := []byte(`{
 		"resourceSpans": [{
 			"resource": {
@@ -118,20 +117,12 @@ func TestTracesReceiver_HandleMessage(t *testing.T) {
 		}]
 	}`)
 
-	// Erwartetes Verhalten
+	// Expected behavior
 	mockInboundMessage.EXPECT().
 		GetPayloadAsBytes().
 		Return(testPayload, true)
 
-	mockInboundMessage.EXPECT().
-		GetCacheRequestID().
-		Return(message.CacheRequestID(0), false).AnyTimes()
-
-	mockInboundMessage.EXPECT().
-		GetCacheStatus().
-		Return(message.CacheStatus(0)).AnyTimes()
-
-	// Consumer und Settings
+	// Consumer and settings
 	consumer := consumertest.NewNop()
 	settings := receiver.CreateSettings{
 		ID:                component.NewID("solaceotlp"),
@@ -139,12 +130,12 @@ func TestTracesReceiver_HandleMessage(t *testing.T) {
 		BuildInfo:         component.BuildInfo{},
 	}
 
-	// Receiver erstellen
+	// Create receiver
 	recv, err := solaceotlpreceiver.NewTracesReceiver(settings, &solaceotlpreceiver.Config{}, consumer)
 	require.NoError(t, err)
 	require.NotNil(t, recv)
 
-	// Message-Handler testen
+	// Test message handler
 	recv.HandleMessage(mockInboundMessage)
 }
 

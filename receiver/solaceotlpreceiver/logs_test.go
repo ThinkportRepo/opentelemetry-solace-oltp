@@ -12,12 +12,11 @@ import (
 	"go.opentelemetry.io/collector/consumer"
 	"go.opentelemetry.io/collector/receiver"
 	"go.uber.org/zap"
-	"solace.dev/go/messaging/pkg/solace/message"
 	"solace.dev/go/messaging/pkg/solace/resource"
 )
 
-// nopHost ist ein leerer Host-Mock für die Tests
-// Erfüllt das component.Host Interface
+// nopHost is an empty host mock for tests
+// Implements the component.Host interface
 type nopHost struct{}
 
 func (nopHost) ReportFatalError(error)                                                    {}
@@ -29,12 +28,12 @@ func TestLogsReceiver_StartShutdown(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 
-	// Mock-Setup
+	// Mock setup
 	mockMessagingService := mocks.NewMockMessagingService(ctrl)
 	mockQueueConsumer := mocks.NewMockQueueConsumer(ctrl)
 	mockQueueConsumerBuilder := mocks.NewMockQueueConsumerBuilder(ctrl)
 
-	// Konfiguration
+	// Configuration
 	cfg := &solaceotlpreceiver.Config{
 		Endpoint: "tcp://localhost:55555",
 		Queue:    "test-queue",
@@ -43,8 +42,8 @@ func TestLogsReceiver_StartShutdown(t *testing.T) {
 		VPN:      "default",
 	}
 
-	// Consumer und Settings
-	// Consumer-Mock (kann nil sein, da im Test nicht verwendet)
+	// Consumer and settings
+	// Consumer mock (can be nil as it's not used in the test)
 	var consumer consumer.Logs
 	settings := receiver.CreateSettings{
 		ID:                component.NewID("solaceotlp"),
@@ -52,7 +51,7 @@ func TestLogsReceiver_StartShutdown(t *testing.T) {
 		BuildInfo:         component.BuildInfo{},
 	}
 
-	// Erwartetes Verhalten
+	// Expected behavior
 	mockMessagingService.EXPECT().
 		Connect().
 		Return(nil)
@@ -85,17 +84,17 @@ func TestLogsReceiver_StartShutdown(t *testing.T) {
 		Disconnect().
 		Return(nil)
 
-	// Receiver erstellen
+	// Create receiver
 	recv, err := solaceotlpreceiver.NewLogsReceiver(settings, cfg, consumer, mockMessagingService)
 	require.NoError(t, err)
 	require.NotNil(t, recv)
 
-	// Start testen
+	// Test start
 	err = recv.Start(context.Background(), nopHost{})
 	require.NoError(t, err)
 
 	recv.QueueConsumer = mockQueueConsumer
-	// Shutdown testen
+	// Test shutdown
 	err = recv.Shutdown(context.Background())
 	require.NoError(t, err)
 }
@@ -104,10 +103,10 @@ func TestLogsReceiver_HandleMessage(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 
-	// Mock-Setup
+	// Mock setup
 	mockInboundMessage := mocks.NewMockInboundMessage(ctrl)
 
-	// Test-Payload
+	// Test payload
 	testPayload := []byte(`{
 		"resourceLogs": [{
 			"resource": {
@@ -127,20 +126,12 @@ func TestLogsReceiver_HandleMessage(t *testing.T) {
 		}]
 	}`)
 
-	// Erwartetes Verhalten
+	// Expected behavior
 	mockInboundMessage.EXPECT().
 		GetPayloadAsBytes().
 		Return(testPayload, true)
 
-	mockInboundMessage.EXPECT().
-		GetCacheRequestID().
-		Return(message.CacheRequestID(0), false).AnyTimes()
-
-	mockInboundMessage.EXPECT().
-		GetCacheStatus().
-		Return(message.CacheStatus(0)).AnyTimes()
-
-	// Consumer und Settings
+	// Consumer and settings
 	var consumer consumer.Logs
 	settings := receiver.CreateSettings{
 		ID:                component.NewID("solaceotlp"),
@@ -148,12 +139,12 @@ func TestLogsReceiver_HandleMessage(t *testing.T) {
 		BuildInfo:         component.BuildInfo{},
 	}
 
-	// Receiver erstellen
+	// Create receiver
 	recv, err := solaceotlpreceiver.NewLogsReceiver(settings, &solaceotlpreceiver.Config{}, consumer)
 	require.NoError(t, err)
 	require.NotNil(t, recv)
 
-	// Message-Handler testen
+	// Test message handler
 	recv.HandleMessage(mockInboundMessage)
 }
 

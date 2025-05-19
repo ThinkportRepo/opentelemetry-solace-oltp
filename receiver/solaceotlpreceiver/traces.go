@@ -18,18 +18,18 @@ import (
 	"go.opentelemetry.io/collector/receiver"
 )
 
-// TracesReceiver implementiert den Receiver für Traces
+// TracesReceiver implements the receiver for traces
 type TracesReceiver struct {
 	consumer         consumer.Traces
 	settings         receiver.CreateSettings
 	config           *Config
 	logger           *zap.Logger
 	wg               sync.WaitGroup
-	messagingService interface{} // echtes SDK oder Mock
-	QueueConsumer    interface{} // speichert den verwendeten QueueConsumer
+	messagingService interface{} // real SDK or mock
+	QueueConsumer    interface{} // stores the used QueueConsumer
 }
 
-// NewTracesReceiver erstellt einen neuen TracesReceiver
+// NewTracesReceiver creates a new TracesReceiver
 func NewTracesReceiver(settings receiver.CreateSettings, config *Config, consumer consumer.Traces, opts ...interface{}) (*TracesReceiver, error) {
 	receiver := &TracesReceiver{
 		consumer: consumer,
@@ -43,7 +43,7 @@ func NewTracesReceiver(settings receiver.CreateSettings, config *Config, consume
 	return receiver, nil
 }
 
-// Start startet den Receiver
+// Start starts the receiver
 func (r *TracesReceiver) Start(ctx context.Context, host component.Host) error {
 	r.logger.Info("Starting Solace OTLP traces receiver",
 		zap.String("endpoint", r.config.Endpoint),
@@ -124,7 +124,7 @@ func (r *TracesReceiver) Start(ctx context.Context, host component.Host) error {
 	return nil
 }
 
-// Shutdown beendet den Receiver
+// Shutdown stops the receiver
 func (r *TracesReceiver) Shutdown(ctx context.Context) error {
 	r.logger.Info("Shutting down Solace OTLP traces receiver")
 	// Hier ggf. weitere Aufräumarbeiten, z.B. Disconnect
@@ -141,7 +141,7 @@ func (r *TracesReceiver) Shutdown(ctx context.Context) error {
 	return nil
 }
 
-// HandleMessage verarbeitet eine eingehende Nachricht
+// HandleMessage processes an incoming message
 func (r *TracesReceiver) HandleMessage(msg message.InboundMessage) {
 	r.wg.Add(1)
 	defer r.wg.Done()

@@ -23,12 +23,14 @@ func NewFactory() receiver.Factory {
 	)
 }
 
+// createDefaultConfig creates the default configuration for the receiver
 func createDefaultConfig() component.Config {
 	return &Config{
 		Queue: "telemetry-queue",
 	}
 }
 
+// createTracesReceiver creates a new traces receiver
 func createTracesReceiver(
 	_ context.Context,
 	settings receiver.CreateSettings,
@@ -43,6 +45,7 @@ func createTracesReceiver(
 	return NewTracesReceiver(settings, config, consumer)
 }
 
+// createLogsReceiver creates a new logs receiver
 func createLogsReceiver(
 	_ context.Context,
 	settings receiver.CreateSettings,
