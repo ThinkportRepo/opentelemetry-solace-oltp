@@ -1,9 +1,10 @@
 receivers:
   solaceotlp:
-    endpoint: "tcp://localhost:5672"
-    queue: "telemetry-queue"
-    username: "default"
-    password: "default"
+    endpoint: ${SOLACE_ENDPOINT}
+    queue: ${SOLACE_QUEUE}
+    username: ${SOLACE_USERNAME}
+    password: ${SOLACE_PASSWORD}
+    vpn: ${SOLACE_VPN}
 
 exporters:
   debug:
