@@ -1,0 +1,37 @@
+type: solaceotlp
+status:
+  class: receiver
+  stability:
+    traces: alpha
+    logs: alpha
+  distributions: [contrib]
+  codeowners: ["@ThinkportRepo"]
+  maintainers: ["@ThinkportRepo"]
+  description: "Receives traces and logs from Solace message broker in OTLP format"
+
+metrics:
+  - name: solaceotlp.receiver.messages.received
+    description: "Number of messages received from Solace"
+    unit: "1"
+    type: Sum
+    value_type: Int
+    attributes:
+      - key: type
+        description: "Type of message (trace/log)"
+        enum:
+          - trace
+          - log
+
+  - name: solaceotlp.receiver.messages.failed
+    description: "Number of messages that failed to be processed"
+    unit: "1"
+    type: Sum
+    value_type: Int
+    attributes:
+      - key: type
+        description: "Type of message (trace/log)"
+        enum:
+          - trace
+          - log
+      - key: error
+        description: "Error type" 
