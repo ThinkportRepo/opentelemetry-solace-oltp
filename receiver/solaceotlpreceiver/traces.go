@@ -8,7 +8,6 @@ import (
 	"go.opentelemetry.io/collector/component"
 	"go.opentelemetry.io/collector/consumer"
 	"go.opentelemetry.io/collector/pdata/ptrace/ptraceotlp"
-	"go.opentelemetry.io/collector/receiver"
 	"go.uber.org/zap"
 	"solace.dev/go/messaging"
 	"solace.dev/go/messaging/pkg/solace/config"
@@ -16,6 +15,7 @@ import (
 	"solace.dev/go/messaging/pkg/solace/resource"
 
 	"github.com/ThinkportRepo/opentelemetry-solace-otlp/receiver/solaceotlpreceiver/internal/mocks"
+	"go.opentelemetry.io/collector/receiver"
 )
 
 // TracesReceiver implementiert den Receiver für Traces

@@ -9,13 +9,21 @@ import (
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/require"
 	"go.opentelemetry.io/collector/component"
-	"go.opentelemetry.io/collector/component/componenttest"
 	"go.opentelemetry.io/collector/consumer"
-	"go.opentelemetry.io/collector/consumer/consumertest"
 	"go.opentelemetry.io/collector/receiver"
+	"go.uber.org/zap"
 	"solace.dev/go/messaging/pkg/solace/message"
 	"solace.dev/go/messaging/pkg/solace/resource"
 )
+
+// nopHost ist ein leerer Host-Mock für die Tests
+// Erfüllt das component.Host Interface
+type nopHost struct{}
+
+func (nopHost) ReportFatalError(error)                                                    {}
+func (nopHost) GetFactory(_ component.Kind, _ component.Type) component.Factory           { return nil }
+func (nopHost) GetExtensions() map[component.ID]component.Component                       { return nil }
+func (nopHost) GetExporters() map[component.DataType]map[component.ID]component.Component { return nil }
 
 func TestLogsReceiver_StartShutdown(t *testing.T) {
 	ctrl := gomock.NewController(t)
@@ -36,10 +44,11 @@ func TestLogsReceiver_StartShutdown(t *testing.T) {
 	}
 
 	// Consumer und Settings
-	consumer := consumertest.NewNop()
+	// Consumer-Mock (kann nil sein, da im Test nicht verwendet)
+	var consumer consumer.Logs
 	settings := receiver.CreateSettings{
-		ID:                component.NewID(component.MustNewType("solaceotlp")),
-		TelemetrySettings: componenttest.NewNopTelemetrySettings(),
+		ID:                component.NewID("solaceotlp"),
+		TelemetrySettings: component.TelemetrySettings{Logger: zap.NewNop()},
 		BuildInfo:         component.BuildInfo{},
 	}
 
@@ -82,7 +91,7 @@ func TestLogsReceiver_StartShutdown(t *testing.T) {
 	require.NotNil(t, recv)
 
 	// Start testen
-	err = recv.Start(context.Background(), componenttest.NewNopHost())
+	err = recv.Start(context.Background(), nopHost{})
 	require.NoError(t, err)
 
 	recv.QueueConsumer = mockQueueConsumer
@@ -132,10 +141,10 @@ func TestLogsReceiver_HandleMessage(t *testing.T) {
 		Return(message.CacheStatus(0)).AnyTimes()
 
 	// Consumer und Settings
-	consumer := consumertest.NewNop()
+	var consumer consumer.Logs
 	settings := receiver.CreateSettings{
-		ID:                component.NewID(component.MustNewType("solaceotlp")),
-		TelemetrySettings: componenttest.NewNopTelemetrySettings(),
+		ID:                component.NewID("solaceotlp"),
+		TelemetrySettings: component.TelemetrySettings{Logger: zap.NewNop()},
 		BuildInfo:         component.BuildInfo{},
 	}
 
@@ -150,8 +159,8 @@ func TestLogsReceiver_HandleMessage(t *testing.T) {
 
 func TestNewLogsReceiver(t *testing.T) {
 	settings := receiver.CreateSettings{
-		ID:                component.NewID(component.MustNewType("solaceotlp")),
-		TelemetrySettings: componenttest.NewNopTelemetrySettings(),
+		ID:                component.NewID("solaceotlp"),
+		TelemetrySettings: component.TelemetrySettings{Logger: zap.NewNop()},
 		BuildInfo:         component.BuildInfo{},
 	}
 	config := &solaceotlpreceiver.Config{

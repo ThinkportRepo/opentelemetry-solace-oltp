@@ -37,7 +37,7 @@ func TestTracesReceiver_StartShutdown(t *testing.T) {
 	// Consumer und Settings
 	consumer := consumertest.NewNop()
 	settings := receiver.CreateSettings{
-		ID:                component.NewID(component.MustNewType("solaceotlp")),
+		ID:                component.NewID("solaceotlp"),
 		TelemetrySettings: componenttest.NewNopTelemetrySettings(),
 		BuildInfo:         component.BuildInfo{},
 	}
@@ -134,7 +134,7 @@ func TestTracesReceiver_HandleMessage(t *testing.T) {
 	// Consumer und Settings
 	consumer := consumertest.NewNop()
 	settings := receiver.CreateSettings{
-		ID:                component.NewID(component.MustNewType("solaceotlp")),
+		ID:                component.NewID("solaceotlp"),
 		TelemetrySettings: componenttest.NewNopTelemetrySettings(),
 		BuildInfo:         component.BuildInfo{},
 	}
@@ -150,7 +150,7 @@ func TestTracesReceiver_HandleMessage(t *testing.T) {
 
 func TestNewTracesReceiver(t *testing.T) {
 	settings := receiver.CreateSettings{
-		ID:                component.NewID(component.MustNewType("solaceotlp")),
+		ID:                component.NewID("solaceotlp"),
 		TelemetrySettings: componenttest.NewNopTelemetrySettings(),
 		BuildInfo:         component.BuildInfo{},
 	}

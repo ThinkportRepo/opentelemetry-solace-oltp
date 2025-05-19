@@ -16,7 +16,7 @@ const (
 // NewFactory creates a factory for Solace OTLP receiver.
 func NewFactory() receiver.Factory {
 	return receiver.NewFactory(
-		component.MustNewType("solaceotlp"),
+		"solaceotlp",
 		createDefaultConfig,
 		receiver.WithTraces(createTracesReceiver, component.StabilityLevelStable),
 		receiver.WithLogs(createLogsReceiver, component.StabilityLevelStable),
