@@ -2,7 +2,7 @@ receivers:
   otlp:
     protocols:
       grpc:
-        endpoint: 0.0.0.0:4319
+        endpoint: 0.0.0.0:4317
       http:
         endpoint: 0.0.0.0:4318
   hostmetrics:
@@ -16,6 +16,14 @@ receivers:
       network: {}
       paging: {}
       processes: {}
+  filelog:
+    include:
+      - /var/log/DiagnosticMessages/*
+    start_at: beginning
+    include_file_path: true
+    include_file_name: true
+    resource:
+      service.name: macos-logs
 
 processors:
   batch:
@@ -40,6 +48,8 @@ processors:
 exporters:
   debug:
     verbosity: detailed
+    sampling_initial: 1
+    sampling_thereafter: 1
   datadog:
     api:
       key: ${DD_API_KEY}
@@ -62,17 +72,21 @@ exporters:
 service:
   telemetry:
     logs:
-      level: info
+      level: debug
+      initial_fields:
+        component: otelcol
+    metrics:
+      level: detailed
   pipelines:
     traces:
       receivers: [otlp]
       processors: [memory_limiter, resource, batch]
-      exporters: [debug, datadog]
+      exporters: [debug]
     metrics:
       receivers: [otlp, hostmetrics]
       processors: [memory_limiter, resource, batch]
       exporters: [debug, datadog]
     logs:
-      receivers: [otlp]
+      receivers: [otlp, filelog]
       processors: [memory_limiter, resource, batch]
       exporters: [debug, datadog] 
