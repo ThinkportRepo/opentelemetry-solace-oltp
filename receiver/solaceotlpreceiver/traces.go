@@ -2,13 +2,12 @@ package solaceotlpreceiver
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"sync"
 
 	"go.opentelemetry.io/collector/component"
 	"go.opentelemetry.io/collector/consumer"
-	"go.opentelemetry.io/collector/pdata/ptrace"
+	"go.opentelemetry.io/collector/pdata/ptrace/ptraceotlp"
 	"go.opentelemetry.io/collector/receiver"
 	"go.uber.org/zap"
 	"solace.dev/go/messaging"
@@ -93,13 +92,11 @@ func (r *TracesReceiver) Start(ctx context.Context, host component.Host) error {
 		if err != nil {
 			return fmt.Errorf("failed to create queue consumer: %w", err)
 		}
-		if starter, ok := queueConsumer.(interface{ Start() error }); ok {
-			err = starter.Start()
-			if err != nil {
-				return fmt.Errorf("failed to start queue consumer: %w", err)
-			}
-		}
 		r.QueueConsumer = queueConsumer
+		err = queueConsumer.Start()
+		if err != nil {
+			return fmt.Errorf("failed to start queue consumer: %w", err)
+		}
 	case mocks.MessagingService:
 		err = ms.Connect()
 		if err != nil {
@@ -155,13 +152,13 @@ func (r *TracesReceiver) HandleMessage(msg message.InboundMessage) {
 		return
 	}
 
-	var traces ptrace.Traces
-	if err := json.Unmarshal(payload, &traces); err != nil {
+	otlpTraces := ptraceotlp.NewExportRequest()
+	if err := otlpTraces.UnmarshalProto(payload); err != nil {
 		r.logger.Error("Failed to unmarshal traces", zap.Error(err))
 		return
 	}
 
-	if err := r.consumer.ConsumeTraces(context.Background(), traces); err != nil {
+	if err := r.consumer.ConsumeTraces(context.Background(), otlpTraces.Traces()); err != nil {
 		r.logger.Error("Failed to consume traces", zap.Error(err))
 	}
 }
