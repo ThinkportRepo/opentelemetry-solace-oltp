@@ -1,4 +1,4 @@
-.PHONY: build start debug docker-build docker-build-local docker-push version-major version-minor version-patch test-spans stop check help
+.PHONY: build start debug docker-build docker-build-local docker-push version-major version-minor version-patch test-spans stop check help kill
 
 # Colors for output
 BLUE := \033[0;34m
@@ -106,8 +106,8 @@ test-spans:
 		otel-cli span \
 			--service "test-service" \
 			--name "test-span" \
-			--endpoint "0.0.0.0:4318" \
-			--protocol http \
+			--endpoint "0.0.0.0:4317" \
+			--protocol grpc \
 			--insecure \
 			--kind client \
 			--attrs "test.attribute=value"; \
@@ -133,3 +133,9 @@ check:
 		exit 1; \
 	fi
 	@echo "${GREEN}OK - All required ports are available${NC}"
+
+kill:
+	@echo "Searching and killing processes on ports 4317 and 4318..."
+	-lsof -ti :4317 | xargs -r kill -9
+	-lsof -ti :4318 | xargs -r kill -9
+	@echo "Done."

@@ -6,7 +6,7 @@ receivers:
       http:
         endpoint: 0.0.0.0:4318
   hostmetrics:
-    collection_interval: 10s
+    collection_interval: 42s
     scrapers:
       cpu: {}
       memory: {}
@@ -16,18 +16,39 @@ receivers:
       network: {}
       paging: {}
       processes: {}
+  httpcheck:
+    collection_interval: 144s
+    initial_delay: 12s
+    targets:
+      - method: "GET"
+        endpoints:
+          - "https://opentelemetry.io"
+      - method: "GET"
+        endpoints:
+          - "https://example.com"
+          - "https://heise.de"
   filelog:
     include:
       - /var/log/DiagnosticMessages/*
+      - /var/lib/docker/containers/*/*.log
     start_at: beginning
     include_file_path: true
     include_file_name: true
     resource:
-      service.name: macos-logs
+      service.name: docker-logs
+    operators:
+      - type: json_parser
+        parse_from: body
+      - type: move
+        from: attributes.container_name
+        to: resource.container.name
+      - type: move
+        from: attributes.container_id
+        to: resource.container.id
 
 processors:
   batch:
-    send_batch_size: 1000
+    send_batch_size: 512
     timeout: 10s
   memory_limiter:
     check_interval: 1s
@@ -43,6 +64,9 @@ processors:
         action: upsert
       - key: deployment.environment
         value: development
+        action: upsert
+      - key: service
+        from_attribute: service.name
         action: upsert
 
 exporters:
@@ -81,12 +105,12 @@ service:
     traces:
       receivers: [otlp]
       processors: [memory_limiter, resource, batch]
-      exporters: [debug]
+      exporters: [debug, datadog]
     metrics:
-      receivers: [otlp, hostmetrics]
+      receivers: [otlp, hostmetrics, httpcheck]
       processors: [memory_limiter, resource, batch]
       exporters: [debug, datadog]
     logs:
       receivers: [otlp, filelog]
       processors: [memory_limiter, resource, batch]
-      exporters: [debug, datadog] 
+      exporters: [debug, datadog]

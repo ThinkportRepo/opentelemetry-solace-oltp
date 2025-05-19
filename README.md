@@ -175,6 +175,43 @@ make debug
 ```
 Starts the OpenTelemetry Collector in debug mode with increased logging level.
 
+### Test Spans
+```bash
+make test-spans
+```
+Sends test spans to the OpenTelemetry Collector using otel-cli. This is useful for testing the collector's trace reception capabilities.
+
+#### otel-cli Configuration
+The test spans are sent using the following configuration:
+- Protocol: gRPC
+- Endpoint: 0.0.0.0:4317
+- Service Name: test-service
+- Span Name: test-span
+- Span Kind: client
+- Attributes: test.attribute=value
+
+To install otel-cli:
+```bash
+# macOS
+brew install otel-cli
+
+# Linux
+curl -L https://github.com/equinix-labs/otel-cli/releases/latest/download/otel-cli-linux-amd64.tar.gz | tar xz
+sudo mv otel-cli /usr/local/bin/
+```
+
+To send custom spans manually:
+```bash
+otel-cli span \
+  --service "your-service" \
+  --name "your-span" \
+  --endpoint "0.0.0.0:4317" \
+  --protocol grpc \
+  --insecure \
+  --kind client \
+  --attrs "key=value"
+```
+
 ## License
 
 This project is licensed under the GNU GENERAL PUBLIC LICENSE - see the [LICENSE](LICENSE) file for details.
