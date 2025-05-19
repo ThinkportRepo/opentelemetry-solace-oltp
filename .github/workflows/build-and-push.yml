@@ -91,12 +91,15 @@ jobs:
 
       - name: Get latest tag
         id: get_tag
+        shell: pwsh
         run: |
-          if git describe --tags --abbrev=0 2>/dev/null; then
-            echo "tag=$(git describe --tags --abbrev=0 | sed 's/^v//')" >> $GITHUB_OUTPUT
-          else
-            echo "tag=dev" >> $GITHUB_OUTPUT
-          fi
+          $tag = git describe --tags --abbrev=0 2>$null
+          if ($?) {
+            $tag = $tag -replace '^v', ''
+            echo "tag=$tag" >> $env:GITHUB_OUTPUT
+          } else {
+            echo "tag=dev" >> $env:GITHUB_OUTPUT
+          }
 
       - name: Set up Go
         uses: actions/setup-go@v5
