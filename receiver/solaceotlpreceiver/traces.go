@@ -2,115 +2,166 @@ package solaceotlpreceiver
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"sync"
 
 	"go.opentelemetry.io/collector/component"
 	"go.opentelemetry.io/collector/consumer"
+	"go.opentelemetry.io/collector/pdata/ptrace"
 	"go.opentelemetry.io/collector/receiver"
 	"go.uber.org/zap"
 	"solace.dev/go/messaging"
-	"solace.dev/go/messaging/pkg/solace"
 	"solace.dev/go/messaging/pkg/solace/config"
 	"solace.dev/go/messaging/pkg/solace/message"
 	"solace.dev/go/messaging/pkg/solace/resource"
+
+	"github.com/ThinkportRepo/opentelemetry-solace-otlp/receiver/solaceotlpreceiver/internal/mocks"
 )
 
-type tracesReceiver struct {
-	config           *Config
+// TracesReceiver implementiert den Receiver für Traces
+type TracesReceiver struct {
 	consumer         consumer.Traces
+	settings         receiver.Settings
+	config           *Config
 	logger           *zap.Logger
-	settings         receiver.CreateSettings
-	messagingService solace.MessagingService
-	queueConsumer    solace.QueueConsumer
 	wg               sync.WaitGroup
+	messagingService interface{} // echtes SDK oder Mock
+	QueueConsumer    interface{} // speichert den verwendeten QueueConsumer
 }
 
-func newTracesReceiver(
-	settings receiver.CreateSettings,
-	config *Config,
-	consumer consumer.Traces,
-) (receiver.Traces, error) {
-	return &tracesReceiver{
-		config:   config,
+// NewTracesReceiver erstellt einen neuen TracesReceiver
+func NewTracesReceiver(settings receiver.Settings, config *Config, consumer consumer.Traces, opts ...interface{}) (*TracesReceiver, error) {
+	receiver := &TracesReceiver{
 		consumer: consumer,
-		logger:   settings.Logger,
 		settings: settings,
-	}, nil
+		config:   config,
+		logger:   settings.Logger,
+	}
+	if len(opts) > 0 {
+		receiver.messagingService = opts[0]
+	}
+	return receiver, nil
 }
 
-func (r *tracesReceiver) Start(ctx context.Context, host component.Host) error {
+// Start startet den Receiver
+func (r *TracesReceiver) Start(ctx context.Context, host component.Host) error {
 	r.logger.Info("Starting Solace OTLP traces receiver",
 		zap.String("endpoint", r.config.Endpoint),
 		zap.String("queue", r.config.Queue))
 
-	// Create messaging service
-	messagingService, err := messaging.NewMessagingServiceBuilder().
-		FromConfigurationProvider(config.ServicePropertyMap{
-			config.TransportLayerPropertyHost:                r.config.Endpoint,
-			config.ServicePropertyVPNName:                    "default",
-			config.AuthenticationPropertySchemeBasicUserName: r.config.Username,
-			config.AuthenticationPropertySchemeBasicPassword: r.config.Password,
-		}).
-		Build()
-	if err != nil {
-		return fmt.Errorf("failed to create messaging service: %w", err)
-	}
-	r.messagingService = messagingService
-
-	// Connect to Solace
-	if err := r.messagingService.Connect(); err != nil {
-		return fmt.Errorf("failed to connect to Solace: %w", err)
+	// MessagingService initialisieren (SDK oder Mock)
+	if r.messagingService == nil {
+		ms, err := messaging.NewMessagingServiceBuilder().
+			FromConfigurationProvider(config.ServicePropertyMap{
+				config.TransportLayerPropertyHost:                r.config.Endpoint,
+				config.ServicePropertyVPNName:                    "default",
+				config.AuthenticationPropertySchemeBasicUserName: r.config.Username,
+				config.AuthenticationPropertySchemeBasicPassword: r.config.Password,
+			}).
+			Build()
+		if err != nil {
+			return fmt.Errorf("failed to create messaging service: %w", err)
+		}
+		r.messagingService = ms
 	}
 
-	// Create queue consumer
-	queueConsumer, err := r.messagingService.CreateQueueConsumerBuilder().
-		WithMessageAutoAcknowledgement().
-		WithMessageListener(r.handleMessage).
-		Build(resource.Queue(r.config.Queue))
-	if err != nil {
-		return fmt.Errorf("failed to create queue consumer: %w", err)
+	var err error
+	type queueConsumerBuilderIface interface {
+		WithMessageAutoAcknowledgement() queueConsumerBuilderIface
+		WithMessageListener(func(message.InboundMessage)) queueConsumerBuilderIface
+		Build(resource.Queue) (interface{ Start() error }, error)
 	}
-	r.queueConsumer = queueConsumer
-
-	// Start consuming
-	if err := r.queueConsumer.Start(); err != nil {
-		return fmt.Errorf("failed to start queue consumer: %w", err)
+	switch ms := r.messagingService.(type) {
+	case interface {
+		Connect() error
+		CreateQueueConsumerBuilder() interface{}
+	}:
+		err = ms.Connect()
+		if err != nil {
+			return fmt.Errorf("failed to connect to Solace: %w", err)
+		}
+		builderIface := ms.CreateQueueConsumerBuilder()
+		builder, ok := builderIface.(queueConsumerBuilderIface)
+		if !ok {
+			return fmt.Errorf("queue consumer builder does not implement required interface")
+		}
+		queueConsumer, err := builder.
+			WithMessageAutoAcknowledgement().
+			WithMessageListener(r.HandleMessage).
+			Build(*resource.QueueDurableExclusive(r.config.Queue))
+		if err != nil {
+			return fmt.Errorf("failed to create queue consumer: %w", err)
+		}
+		if starter, ok := queueConsumer.(interface{ Start() error }); ok {
+			err = starter.Start()
+			if err != nil {
+				return fmt.Errorf("failed to start queue consumer: %w", err)
+			}
+		}
+		r.QueueConsumer = queueConsumer
+	case mocks.MessagingService:
+		err = ms.Connect()
+		if err != nil {
+			return fmt.Errorf("failed to connect to Solace (mock): %w", err)
+		}
+		queueConsumerBuilder := ms.CreateQueueConsumerBuilder()
+		queueConsumer, err := queueConsumerBuilder.
+			WithMessageAutoAcknowledgement().
+			WithMessageListener(r.HandleMessage).
+			Build(*resource.QueueDurableExclusive(r.config.Queue))
+		if err != nil {
+			return fmt.Errorf("failed to create queue consumer (mock): %w", err)
+		}
+		if starter, ok := queueConsumer.(interface{ Start() error }); ok {
+			err = starter.Start()
+			if err != nil {
+				return fmt.Errorf("failed to start queue consumer (mock): %w", err)
+			}
+		}
+		r.QueueConsumer = queueConsumer
+	default:
+		return fmt.Errorf("unsupported messagingService type")
 	}
 
 	return nil
 }
 
-func (r *tracesReceiver) handleMessage(msg message.InboundMessage) {
+// Shutdown beendet den Receiver
+func (r *TracesReceiver) Shutdown(ctx context.Context) error {
+	r.logger.Info("Shutting down Solace OTLP traces receiver")
+	// Hier ggf. weitere Aufräumarbeiten, z.B. Disconnect
+	if r.QueueConsumer != nil {
+		if terminator, ok := r.QueueConsumer.(interface{ Terminate(uint) error }); ok {
+			_ = terminator.Terminate(10)
+		}
+	}
+	if r.messagingService != nil {
+		if disconnector, ok := r.messagingService.(interface{ Disconnect() error }); ok {
+			_ = disconnector.Disconnect()
+		}
+	}
+	return nil
+}
+
+// HandleMessage verarbeitet eine eingehende Nachricht
+func (r *TracesReceiver) HandleMessage(msg message.InboundMessage) {
 	r.wg.Add(1)
 	defer r.wg.Done()
 
-	traces, err := parseOTLPTraceMessage(msg)
-	if err != nil {
-		r.logger.Error("Failed to parse OTLP trace message", zap.Error(err))
+	payload, ok := msg.GetPayloadAsBytes()
+	if !ok {
+		r.logger.Error("Failed to get message payload")
+		return
+	}
+
+	var traces ptrace.Traces
+	if err := json.Unmarshal(payload, &traces); err != nil {
+		r.logger.Error("Failed to unmarshal traces", zap.Error(err))
 		return
 	}
 
 	if err := r.consumer.ConsumeTraces(context.Background(), traces); err != nil {
 		r.logger.Error("Failed to consume traces", zap.Error(err))
 	}
-}
-
-func (r *tracesReceiver) Shutdown(ctx context.Context) error {
-	r.logger.Info("Shutting down Solace OTLP traces receiver")
-
-	if r.queueConsumer != nil {
-		if err := r.queueConsumer.Terminate(10); err != nil {
-			r.logger.Error("Failed to terminate queue consumer", zap.Error(err))
-		}
-	}
-
-	if r.messagingService != nil {
-		if err := r.messagingService.Disconnect(); err != nil {
-			r.logger.Error("Failed to disconnect messaging service", zap.Error(err))
-		}
-	}
-
-	r.wg.Wait()
-	return nil
 }

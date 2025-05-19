@@ -16,10 +16,10 @@ const (
 // NewFactory creates a factory for Solace OTLP receiver.
 func NewFactory() receiver.Factory {
 	return receiver.NewFactory(
-		typeStr,
+		component.MustNewType("solaceotlp"),
 		createDefaultConfig,
-		receiver.WithTraces(createTracesReceiver, component.StabilityLevelAlpha),
-		receiver.WithLogs(createLogsReceiver, component.StabilityLevelAlpha),
+		receiver.WithTraces(createTracesReceiver, component.StabilityLevelStable),
+		receiver.WithLogs(createLogsReceiver, component.StabilityLevelStable),
 	)
 }
 
@@ -31,7 +31,7 @@ func createDefaultConfig() component.Config {
 
 func createTracesReceiver(
 	_ context.Context,
-	params receiver.CreateSettings,
+	settings receiver.Settings,
 	cfg component.Config,
 	consumer consumer.Traces,
 ) (receiver.Traces, error) {
@@ -40,12 +40,12 @@ func createTracesReceiver(
 	}
 
 	config := cfg.(*Config)
-	return newTracesReceiver(params, config, consumer)
+	return NewTracesReceiver(settings, config, consumer)
 }
 
 func createLogsReceiver(
 	_ context.Context,
-	params receiver.CreateSettings,
+	settings receiver.Settings,
 	cfg component.Config,
 	consumer consumer.Logs,
 ) (receiver.Logs, error) {
@@ -54,5 +54,5 @@ func createLogsReceiver(
 	}
 
 	config := cfg.(*Config)
-	return newLogsReceiver(params, config, consumer)
+	return NewLogsReceiver(settings, config, consumer)
 }
