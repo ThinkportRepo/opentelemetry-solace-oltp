@@ -10,8 +10,10 @@ import (
 	"github.com/stretchr/testify/require"
 	"go.opentelemetry.io/collector/component"
 	"go.opentelemetry.io/collector/component/componenttest"
+	"go.opentelemetry.io/collector/consumer"
 	"go.opentelemetry.io/collector/consumer/consumertest"
 	"go.opentelemetry.io/collector/receiver"
+	"solace.dev/go/messaging/pkg/solace/message"
 	"solace.dev/go/messaging/pkg/solace/resource"
 )
 
@@ -34,7 +36,7 @@ func TestTracesReceiver_StartShutdown(t *testing.T) {
 
 	// Consumer und Settings
 	consumer := consumertest.NewNop()
-	settings := receiver.Settings{
+	settings := receiver.CreateSettings{
 		ID:                component.NewID(component.MustNewType("solaceotlp")),
 		TelemetrySettings: componenttest.NewNopTelemetrySettings(),
 		BuildInfo:         component.BuildInfo{},
@@ -121,9 +123,17 @@ func TestTracesReceiver_HandleMessage(t *testing.T) {
 		GetPayloadAsBytes().
 		Return(testPayload, true)
 
+	mockInboundMessage.EXPECT().
+		GetCacheRequestID().
+		Return(message.CacheRequestID(0), false).AnyTimes()
+
+	mockInboundMessage.EXPECT().
+		GetCacheStatus().
+		Return(message.CacheStatus(0)).AnyTimes()
+
 	// Consumer und Settings
 	consumer := consumertest.NewNop()
-	settings := receiver.Settings{
+	settings := receiver.CreateSettings{
 		ID:                component.NewID(component.MustNewType("solaceotlp")),
 		TelemetrySettings: componenttest.NewNopTelemetrySettings(),
 		BuildInfo:         component.BuildInfo{},
@@ -136,4 +146,31 @@ func TestTracesReceiver_HandleMessage(t *testing.T) {
 
 	// Message-Handler testen
 	recv.HandleMessage(mockInboundMessage)
+}
+
+func TestNewTracesReceiver(t *testing.T) {
+	settings := receiver.CreateSettings{
+		ID:                component.NewID(component.MustNewType("solaceotlp")),
+		TelemetrySettings: componenttest.NewNopTelemetrySettings(),
+		BuildInfo:         component.BuildInfo{},
+	}
+	config := &solaceotlpreceiver.Config{
+		Endpoint: "tcp://localhost:55555",
+		Queue:    "otel-traces",
+		Username: "default",
+		Password: "default",
+		VPN:      "default",
+	}
+	var consumer consumer.Traces
+
+	receiver, err := solaceotlpreceiver.NewTracesReceiver(settings, config, consumer)
+	if err != nil {
+		t.Fatalf("NewTracesReceiver returned error: %v", err)
+	}
+	if receiver == nil {
+		t.Fatal("NewTracesReceiver returned nil receiver")
+	}
+	if receiver.GetVPN() != "default" {
+		t.Errorf("Expected VPN to be 'default', got %s", receiver.GetVPN())
+	}
 }

@@ -79,6 +79,35 @@ func (mr *MockInboundMessageMockRecorder) GetApplicationMessageType() *gomock.Ca
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetApplicationMessageType", reflect.TypeOf((*MockInboundMessage)(nil).GetApplicationMessageType))
 }
 
+// GetCacheRequestID mocks base method.
+func (m *MockInboundMessage) GetCacheRequestID() (message.CacheRequestID, bool) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetCacheRequestID")
+	ret0, _ := ret[0].(message.CacheRequestID)
+	ret1, _ := ret[1].(bool)
+	return ret0, ret1
+}
+
+// GetCacheRequestID indicates an expected call of GetCacheRequestID.
+func (mr *MockInboundMessageMockRecorder) GetCacheRequestID() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetCacheRequestID", reflect.TypeOf((*MockInboundMessage)(nil).GetCacheRequestID))
+}
+
+// GetCacheStatus mocks base method.
+func (m *MockInboundMessage) GetCacheStatus() message.CacheStatus {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetCacheStatus")
+	ret0, _ := ret[0].(message.CacheStatus)
+	return ret0
+}
+
+// GetCacheStatus indicates an expected call of GetCacheStatus.
+func (mr *MockInboundMessageMockRecorder) GetCacheStatus() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetCacheStatus", reflect.TypeOf((*MockInboundMessage)(nil).GetCacheStatus))
+}
+
 // GetClassOfService mocks base method.
 func (m *MockInboundMessage) GetClassOfService() int {
 	m.ctrl.T.Helper()

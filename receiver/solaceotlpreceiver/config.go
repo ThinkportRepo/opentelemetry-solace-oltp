@@ -20,6 +20,9 @@ type Config struct {
 	// Password for Solace authentication
 	Password string `mapstructure:"password"`
 
+	// VPN is the name of the Solace VPN
+	VPN string `mapstructure:"vpn"`
+
 	// TLS configuration
 	TLS *TLSConfig `mapstructure:"tls"`
 }

@@ -1,4 +1,4 @@
-.PHONY: build start debug docker-build docker-build-local docker-push version-major version-minor version-patch test-spans stop check help kill generate-mocks test
+.PHONY: build start debug docker-build docker-build-local docker-push version-major version-minor version-patch test-spans stop check help kill generate-mocks test print-env
 
 # Colors for output
 BLUE := \033[0;34m
@@ -32,6 +32,7 @@ help:
 	@echo "${GREEN}version-patch${NC}      - Increment patch version"
 	@echo "${GREEN}generate-mocks${NC}     - Generate mocks for tests"
 	@echo "${GREEN}test${NC}               - Run Go-Tests"
+	@echo "${GREEN}print-env${NC}           - Print environment variables"
 
 version-major:
 	@echo "${BLUE}Current version:${NC} $(CURRENT_VERSION)"
@@ -75,7 +76,7 @@ build:
 # Start the OpenTelemetry Collector
 start:
 	@echo "${BLUE}Starting OpenTelemetry Collector … ${NC}"
-	@./otelcol-dev/otelcol-dev --config collector-config.yaml
+	@SOLACE_ENDPOINT=$(SOLACE_ENDPOINT) SOLACE_QUEUE=$(SOLACE_QUEUE) SOLACE_USERNAME=$(SOLACE_USERNAME) SOLACE_PASSWORD=$(SOLACE_PASSWORD) ./otelcol-dev/otelcol-dev --config collector-config.yaml
 
 # Build and start the OpenTelemetry Collector
 rebuild:
@@ -147,9 +148,16 @@ generate-mocks:
 	mockgen -source=receiver/solaceotlpreceiver/internal/mocks/messaging_service.go -destination=receiver/solaceotlpreceiver/internal/mocks/mock_messaging_service.go -package=mocks
 	mockgen -source=receiver/solaceotlpreceiver/internal/mocks/queue_consumer.go -destination=receiver/solaceotlpreceiver/internal/mocks/mock_queue_consumer.go -package=mocks
 	mockgen -source=receiver/solaceotlpreceiver/internal/mocks/queue_consumer_builder.go -destination=receiver/solaceotlpreceiver/internal/mocks/mock_queue_consumer_builder.go -package=mocks
-	mockgen -source=receiver/solaceotlpreceiver/internal/mocks/inbound_message.go -destination=receiver/solaceotlpreceiver/internal/mocks/mock_inbound_message.go -package=mocks
+	mockgen -source=receiver/solaceotlpreceiver/internal/interfaces/inbound_message.go -destination=receiver/solaceotlpreceiver/internal/mocks/mock_inbound_message.go -package=mocks
 
 test:
 	@echo "${BLUE}Running Go-Tests … ${NC}"
 	@go test ./... -v
 	@echo "${GREEN}Tests abgeschlossen${NC}"
+
+print-env:
+	@echo "SOLACE_ENDPOINT=$(SOLACE_ENDPOINT)"
+	@echo "SOLACE_QUEUE=$(SOLACE_QUEUE)"
+	@echo "SOLACE_USERNAME=$(SOLACE_USERNAME)"
+	@echo "SOLACE_PASSWORD=$(SOLACE_PASSWORD)"
+	@echo "SOLACE_VPN=$(SOLACE_VPN)"

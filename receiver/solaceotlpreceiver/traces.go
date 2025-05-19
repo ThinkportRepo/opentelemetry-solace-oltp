@@ -21,7 +21,7 @@ import (
 // TracesReceiver implementiert den Receiver für Traces
 type TracesReceiver struct {
 	consumer         consumer.Traces
-	settings         receiver.Settings
+	settings         receiver.CreateSettings
 	config           *Config
 	logger           *zap.Logger
 	wg               sync.WaitGroup
@@ -30,12 +30,12 @@ type TracesReceiver struct {
 }
 
 // NewTracesReceiver erstellt einen neuen TracesReceiver
-func NewTracesReceiver(settings receiver.Settings, config *Config, consumer consumer.Traces, opts ...interface{}) (*TracesReceiver, error) {
+func NewTracesReceiver(settings receiver.CreateSettings, config *Config, consumer consumer.Traces, opts ...interface{}) (*TracesReceiver, error) {
 	receiver := &TracesReceiver{
 		consumer: consumer,
 		settings: settings,
 		config:   config,
-		logger:   settings.Logger,
+		logger:   settings.TelemetrySettings.Logger,
 	}
 	if len(opts) > 0 {
 		receiver.messagingService = opts[0]
@@ -54,7 +54,7 @@ func (r *TracesReceiver) Start(ctx context.Context, host component.Host) error {
 		ms, err := messaging.NewMessagingServiceBuilder().
 			FromConfigurationProvider(config.ServicePropertyMap{
 				config.TransportLayerPropertyHost:                r.config.Endpoint,
-				config.ServicePropertyVPNName:                    "default",
+				config.ServicePropertyVPNName:                    r.config.VPN,
 				config.AuthenticationPropertySchemeBasicUserName: r.config.Username,
 				config.AuthenticationPropertySchemeBasicPassword: r.config.Password,
 			}).
@@ -161,4 +161,9 @@ func (r *TracesReceiver) HandleMessage(msg message.InboundMessage) {
 	if err := r.consumer.ConsumeTraces(context.Background(), otlpTraces.Traces()); err != nil {
 		r.logger.Error("Failed to consume traces", zap.Error(err))
 	}
+}
+
+// GetVPN returns the VPN configuration
+func (r *TracesReceiver) GetVPN() string {
+	return r.config.VPN
 }

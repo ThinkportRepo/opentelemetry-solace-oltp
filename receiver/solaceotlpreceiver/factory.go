@@ -31,7 +31,7 @@ func createDefaultConfig() component.Config {
 
 func createTracesReceiver(
 	_ context.Context,
-	settings receiver.Settings,
+	settings receiver.CreateSettings,
 	cfg component.Config,
 	consumer consumer.Traces,
 ) (receiver.Traces, error) {
@@ -45,7 +45,7 @@ func createTracesReceiver(
 
 func createLogsReceiver(
 	_ context.Context,
-	settings receiver.Settings,
+	settings receiver.CreateSettings,
 	cfg component.Config,
 	consumer consumer.Logs,
 ) (receiver.Logs, error) {

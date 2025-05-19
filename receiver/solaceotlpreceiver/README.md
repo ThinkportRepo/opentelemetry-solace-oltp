@@ -28,6 +28,7 @@ receivers:
     queue: "otel-traces" # Queue name for traces
     username: "default" # Solace username
     password: "default" # Solace password
+    vpn: "default" # Solace VPN name
 ```
 
 ### Configuration Fields
@@ -38,6 +39,7 @@ receivers:
 | `queue`    | The name of the queue to receive traces from | `otel-traces`           |
 | `username` | The username for the Solace connection       | `default`               |
 | `password` | The password for the Solace connection       | `default`               |
+| `vpn`      | The VPN name for the Solace connection       | `default`               |
 
 ## Features
 

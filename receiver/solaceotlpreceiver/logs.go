@@ -21,7 +21,7 @@ import (
 // LogsReceiver implementiert den Receiver für Logs
 type LogsReceiver struct {
 	consumer         consumer.Logs
-	settings         receiver.Settings
+	settings         receiver.CreateSettings
 	config           *Config
 	logger           *zap.Logger
 	wg               sync.WaitGroup
@@ -30,12 +30,12 @@ type LogsReceiver struct {
 }
 
 // NewLogsReceiver erstellt einen neuen LogsReceiver
-func NewLogsReceiver(settings receiver.Settings, config *Config, consumer consumer.Logs, opts ...interface{}) (*LogsReceiver, error) {
+func NewLogsReceiver(settings receiver.CreateSettings, config *Config, consumer consumer.Logs, opts ...interface{}) (*LogsReceiver, error) {
 	receiver := &LogsReceiver{
 		consumer: consumer,
 		settings: settings,
 		config:   config,
-		logger:   settings.Logger,
+		logger:   settings.TelemetrySettings.Logger,
 	}
 	if len(opts) > 0 {
 		receiver.messagingService = opts[0]
@@ -54,7 +54,7 @@ func (r *LogsReceiver) Start(ctx context.Context, host component.Host) error {
 		ms, err := messaging.NewMessagingServiceBuilder().
 			FromConfigurationProvider(config.ServicePropertyMap{
 				config.TransportLayerPropertyHost:                r.config.Endpoint,
-				config.ServicePropertyVPNName:                    "default",
+				config.ServicePropertyVPNName:                    r.config.VPN,
 				config.AuthenticationPropertySchemeBasicUserName: r.config.Username,
 				config.AuthenticationPropertySchemeBasicPassword: r.config.Password,
 			}).
@@ -172,4 +172,9 @@ func (r *LogsReceiver) HandleMessage(msg message.InboundMessage) {
 	if err := r.consumer.ConsumeLogs(context.Background(), otlpLogs.Logs()); err != nil {
 		r.logger.Error("Failed to consume logs", zap.Error(err))
 	}
+}
+
+// GetVPN returns the VPN configuration
+func (r *LogsReceiver) GetVPN() string {
+	return r.config.VPN
 }
