@@ -1,8 +1,5 @@
 # Solace OTLP Receiver
 
-[![Coverage](https://raw.githubusercontent.com/ThinkportRepo/opentelemetry-solace-otlp/main/coverage.json)](https://github.com/ThinkportRepo/opentelemetry-solace-otlp)
-
-
 This receiver enables receiving OpenTelemetry data via Solace Message Broker.
 
 ## Architecture
