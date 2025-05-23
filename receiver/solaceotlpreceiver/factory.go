@@ -26,7 +26,7 @@ func NewFactory() receiver.Factory {
 // createDefaultConfig creates the default configuration for the receiver
 func createDefaultConfig() component.Config {
 	return &Config{
-		Queue: "telemetry-queue",
+		Queue: "telemetry",
 	}
 }
 
