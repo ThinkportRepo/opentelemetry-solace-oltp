@@ -9,14 +9,14 @@ import (
 	"go.opentelemetry.io/collector/receiver"
 )
 
-const (
-	typeStr = "solaceotlp"
+var (
+	typeStr = component.MustNewType("solaceotlp")
 )
 
 // NewFactory creates a factory for Solace OTLP receiver.
 func NewFactory() receiver.Factory {
 	return receiver.NewFactory(
-		"solaceotlp",
+		typeStr,
 		createDefaultConfig,
 		receiver.WithTraces(createTracesReceiver, component.StabilityLevelStable),
 		receiver.WithLogs(createLogsReceiver, component.StabilityLevelStable),
@@ -33,7 +33,7 @@ func createDefaultConfig() component.Config {
 // createTracesReceiver creates a new traces receiver
 func createTracesReceiver(
 	_ context.Context,
-	settings receiver.CreateSettings,
+	settings receiver.Settings,
 	cfg component.Config,
 	consumer consumer.Traces,
 ) (receiver.Traces, error) {
@@ -48,7 +48,7 @@ func createTracesReceiver(
 // createLogsReceiver creates a new logs receiver
 func createLogsReceiver(
 	_ context.Context,
-	settings receiver.CreateSettings,
+	settings receiver.Settings,
 	cfg component.Config,
 	consumer consumer.Logs,
 ) (receiver.Logs, error) {

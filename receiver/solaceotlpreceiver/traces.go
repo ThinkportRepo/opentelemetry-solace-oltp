@@ -21,7 +21,7 @@ import (
 // TracesReceiver implements the receiver for traces
 type TracesReceiver struct {
 	consumer         consumer.Traces
-	settings         receiver.CreateSettings
+	settings         receiver.Settings
 	config           *Config
 	logger           *zap.Logger
 	wg               sync.WaitGroup
@@ -30,7 +30,12 @@ type TracesReceiver struct {
 }
 
 // NewTracesReceiver creates a new TracesReceiver
-func NewTracesReceiver(settings receiver.CreateSettings, config *Config, consumer consumer.Traces, opts ...interface{}) (*TracesReceiver, error) {
+func NewTracesReceiver(
+	settings receiver.Settings,
+	config *Config,
+	consumer consumer.Traces,
+	opts ...interface{},
+) (*TracesReceiver, error) {
 	receiver := &TracesReceiver{
 		consumer: consumer,
 		settings: settings,

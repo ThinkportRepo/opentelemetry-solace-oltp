@@ -21,7 +21,7 @@ import (
 // LogsReceiver implementiert den Receiver für Logs
 type LogsReceiver struct {
 	consumer         consumer.Logs
-	settings         receiver.CreateSettings
+	settings         receiver.Settings
 	config           *Config
 	logger           *zap.Logger
 	wg               sync.WaitGroup
@@ -30,7 +30,12 @@ type LogsReceiver struct {
 }
 
 // NewLogsReceiver erstellt einen neuen LogsReceiver
-func NewLogsReceiver(settings receiver.CreateSettings, config *Config, consumer consumer.Logs, opts ...interface{}) (*LogsReceiver, error) {
+func NewLogsReceiver(
+	settings receiver.Settings,
+	config *Config,
+	consumer consumer.Logs,
+	opts ...interface{},
+) (*LogsReceiver, error) {
 	receiver := &LogsReceiver{
 		consumer: consumer,
 		settings: settings,
