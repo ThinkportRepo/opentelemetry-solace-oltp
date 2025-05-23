@@ -1,5 +1,38 @@
 # Custom Collector
 
+## Architecture
+
+```mermaid
+graph LR
+    subgraph Solace
+        S[Solace Message Broker]
+    end
+
+    subgraph Custom Collector
+        R[Solace Receiver]
+        P[Pipeline]
+        E[Datadog Exporter]
+    end
+
+    subgraph Datadog
+        D[Datadog Platform]
+        M[Metrics]
+        T[Traces]
+        L[Logs]
+    end
+
+    S -->|Telemetry Data| R
+    R -->|Process| P
+    P -->|Export| E
+    E -->|Metrics| M
+    E -->|Traces| T
+    E -->|Logs| L
+
+    style Solace fill:#f9f,stroke:#333,stroke-width:2px
+    style Custom Collector fill:#bbf,stroke:#333,stroke-width:2px
+    style Datadog fill:#bfb,stroke:#333,stroke-width:2px
+```
+
 ## Environment Variables
 
 The project includes a `.env.dist` file as a template for configuration. To set up the environment variables:
