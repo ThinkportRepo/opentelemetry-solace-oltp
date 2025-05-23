@@ -5,6 +5,26 @@
 
 This receiver enables receiving OpenTelemetry data via Solace Message Broker.
 
+## Architecture
+
+```mermaid
+graph LR
+    A[OpenTelemetry SDK] -->|Sends Traces/Logs| B[Solace Message Broker]
+    B -->|Consumes Messages| C[Solace OTLP Receiver]
+    C -->|Processes Data| D[OpenTelemetry Collector]
+    D -->|Exports Data| E[Backend Systems]
+    
+    subgraph "Solace Configuration"
+        B
+        style B fill:#f9f,stroke:#333,stroke-width:2px
+    end
+    
+    subgraph "Receiver Components"
+        C
+        style C fill:#bbf,stroke:#333,stroke-width:2px
+    end
+```
+
 ## Status
 
 This receiver is in **alpha** status. The following features are supported:
