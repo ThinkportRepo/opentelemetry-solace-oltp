@@ -3,6 +3,7 @@ package solaceotlpreceiver
 import (
 	"context"
 	"fmt"
+	"os"
 	"sync"
 
 	"go.opentelemetry.io/collector/component"
@@ -10,6 +11,7 @@ import (
 	"go.opentelemetry.io/collector/pdata/ptrace/ptraceotlp"
 	"go.uber.org/zap"
 	"solace.dev/go/messaging"
+	"solace.dev/go/messaging/pkg/solace"
 	"solace.dev/go/messaging/pkg/solace/config"
 	"solace.dev/go/messaging/pkg/solace/message"
 	"solace.dev/go/messaging/pkg/solace/resource"
@@ -56,19 +58,26 @@ func (r *TracesReceiver) Start(ctx context.Context, host component.Host) error {
 
 	// MessagingService initialisieren (SDK oder Mock)
 	if r.messagingService == nil {
+		r.logger.Info("Creating new MessagingService (SDK or Mock)")
 		ms, err := messaging.NewMessagingServiceBuilder().
 			FromConfigurationProvider(config.ServicePropertyMap{
-				config.TransportLayerPropertyHost:                r.config.Endpoint,
-				config.ServicePropertyVPNName:                    r.config.VPN,
-				config.AuthenticationPropertySchemeBasicUserName: r.config.Username,
-				config.AuthenticationPropertySchemeBasicPassword: r.config.Password,
+				config.TransportLayerPropertyHost:                   r.config.Endpoint,
+				config.ServicePropertyVPNName:                       r.config.VPN,
+				config.AuthenticationPropertySchemeBasicUserName:    r.config.Username,
+				config.AuthenticationPropertySchemeBasicPassword:    r.config.Password,
+				config.TransportLayerSecurityPropertyTrustStorePath: getTrustStorePath(),
 			}).
+			WithTransportSecurityStrategy(
+				config.NewTransportSecurityStrategy().WithCertificateValidation(true, false, "", ""),
+			).
 			Build()
 		if err != nil {
 			return fmt.Errorf("failed to create messaging service: %w", err)
 		}
 		r.messagingService = ms
 	}
+
+	r.logger.Info("Initializing QueueConsumer...")
 
 	var err error
 	type queueConsumerBuilderIface interface {
@@ -81,6 +90,7 @@ func (r *TracesReceiver) Start(ctx context.Context, host component.Host) error {
 		Connect() error
 		CreateQueueConsumerBuilder() interface{}
 	}:
+		r.logger.Info("Using generic MessagingService interface")
 		err = ms.Connect()
 		if err != nil {
 			return fmt.Errorf("failed to connect to Solace: %w", err)
@@ -90,6 +100,7 @@ func (r *TracesReceiver) Start(ctx context.Context, host component.Host) error {
 		if !ok {
 			return fmt.Errorf("queue consumer builder does not implement required interface")
 		}
+		r.logger.Info("Building QueueConsumer...")
 		queueConsumer, err := builder.
 			WithMessageAutoAcknowledgement().
 			WithMessageListener(r.HandleMessage).
@@ -98,11 +109,13 @@ func (r *TracesReceiver) Start(ctx context.Context, host component.Host) error {
 			return fmt.Errorf("failed to create queue consumer: %w", err)
 		}
 		r.QueueConsumer = queueConsumer
+		r.logger.Info("Starting QueueConsumer...")
 		err = queueConsumer.Start()
 		if err != nil {
 			return fmt.Errorf("failed to start queue consumer: %w", err)
 		}
 	case mocks.MessagingService:
+		r.logger.Info("Using Mock MessagingService")
 		err = ms.Connect()
 		if err != nil {
 			return fmt.Errorf("failed to connect to Solace (mock): %w", err)
@@ -122,9 +135,29 @@ func (r *TracesReceiver) Start(ctx context.Context, host component.Host) error {
 			}
 		}
 		r.QueueConsumer = queueConsumer
+	case solace.MessagingService:
+		r.logger.Info("Using real Solace SDK MessagingService")
+		err = ms.Connect()
+		if err != nil {
+			return fmt.Errorf("failed to connect to Solace (SDK): %w", err)
+		}
+		builder := ms.CreatePersistentMessageReceiverBuilder()
+		receiver, err := builder.Build(resource.QueueDurableExclusive(r.config.Queue))
+		if err != nil {
+			return fmt.Errorf("failed to build persistent message receiver (SDK): %w", err)
+		}
+		r.QueueConsumer = receiver
+		r.logger.Info("Starting persistent message receiver (SDK)...")
+		err = receiver.Start()
+		if err != nil {
+			return fmt.Errorf("failed to start persistent message receiver (SDK): %w", err)
+		}
 	default:
+		r.logger.Error("Unknown MessagingService type!", zap.Any("type", ms))
 		return fmt.Errorf("unsupported messagingService type")
 	}
+
+	r.logger.Info("Solace OTLP traces receiver started successfully!")
 
 	return nil
 }
@@ -148,6 +181,7 @@ func (r *TracesReceiver) Shutdown(ctx context.Context) error {
 
 // HandleMessage processes an incoming message
 func (r *TracesReceiver) HandleMessage(msg message.InboundMessage) {
+	r.logger.Info("HandleMessage called - new message received!")
 	r.wg.Add(1)
 	defer r.wg.Done()
 
@@ -157,18 +191,32 @@ func (r *TracesReceiver) HandleMessage(msg message.InboundMessage) {
 		return
 	}
 
+	r.logger.Info("Message received, attempting to deserialize...", zap.Int("payload_len", len(payload)))
+
 	otlpTraces := ptraceotlp.NewExportRequest()
 	if err := otlpTraces.UnmarshalProto(payload); err != nil {
 		r.logger.Error("Failed to unmarshal traces", zap.Error(err))
 		return
 	}
 
+	r.logger.Info("Trace successfully deserialized, forwarding to consumer...")
+
 	if err := r.consumer.ConsumeTraces(context.Background(), otlpTraces.Traces()); err != nil {
 		r.logger.Error("Failed to consume traces", zap.Error(err))
+	} else {
+		r.logger.Info("Trace successfully passed to consumer!")
 	}
 }
 
 // GetVPN returns the VPN configuration
 func (r *TracesReceiver) GetVPN() string {
 	return r.config.VPN
+}
+
+// getTrustStorePath returns the truststore path from environment variable or default
+func getTrustStorePath() string {
+	if path := os.Getenv("SESSION_SSL_TRUST_STORE_DIR"); path != "" {
+		return path
+	}
+	return "truststore"
 }

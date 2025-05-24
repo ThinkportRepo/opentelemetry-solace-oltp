@@ -10,6 +10,7 @@ import (
 	"go.opentelemetry.io/collector/pdata/plog/plogotlp"
 	"go.uber.org/zap"
 	"solace.dev/go/messaging"
+	"solace.dev/go/messaging/pkg/solace"
 	"solace.dev/go/messaging/pkg/solace/config"
 	"solace.dev/go/messaging/pkg/solace/message"
 	"solace.dev/go/messaging/pkg/solace/resource"
@@ -58,11 +59,15 @@ func (r *LogsReceiver) Start(ctx context.Context, host component.Host) error {
 	if r.messagingService == nil {
 		ms, err := messaging.NewMessagingServiceBuilder().
 			FromConfigurationProvider(config.ServicePropertyMap{
-				config.TransportLayerPropertyHost:                r.config.Endpoint,
-				config.ServicePropertyVPNName:                    r.config.VPN,
-				config.AuthenticationPropertySchemeBasicUserName: r.config.Username,
-				config.AuthenticationPropertySchemeBasicPassword: r.config.Password,
+				config.TransportLayerPropertyHost:                   r.config.Endpoint,
+				config.ServicePropertyVPNName:                       r.config.VPN,
+				config.AuthenticationPropertySchemeBasicUserName:    r.config.Username,
+				config.AuthenticationPropertySchemeBasicPassword:    r.config.Password,
+				config.TransportLayerSecurityPropertyTrustStorePath: "truststore",
 			}).
+			WithTransportSecurityStrategy(
+				config.NewTransportSecurityStrategy().WithCertificateValidation(true, false, "", ""),
+			).
 			Build()
 		if err != nil {
 			return fmt.Errorf("failed to create messaging service: %w", err)
@@ -121,6 +126,21 @@ func (r *LogsReceiver) Start(ctx context.Context, host component.Host) error {
 			if err != nil {
 				return fmt.Errorf("failed to start queue consumer (mock): %w", err)
 			}
+		}
+	case solace.MessagingService:
+		err = ms.Connect()
+		if err != nil {
+			return fmt.Errorf("failed to connect to Solace (SDK): %w", err)
+		}
+		builder := ms.CreatePersistentMessageReceiverBuilder()
+		receiver, err := builder.Build(resource.QueueDurableExclusive(r.config.Queue))
+		if err != nil {
+			return fmt.Errorf("failed to build persistent message receiver (SDK): %w", err)
+		}
+		r.QueueConsumer = receiver
+		err = receiver.Start()
+		if err != nil {
+			return fmt.Errorf("failed to start persistent message receiver (SDK): %w", err)
 		}
 	default:
 		return fmt.Errorf("unsupported messagingService type")

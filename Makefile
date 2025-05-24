@@ -76,7 +76,7 @@ build:
 # Start the OpenTelemetry Collector
 start:
 	@echo "${BLUE}Starting OpenTelemetry Collector … ${NC}"
-	@SOLACE_ENDPOINT=$(SOLACE_ENDPOINT) SOLACE_QUEUE=$(SOLACE_QUEUE) SOLACE_USERNAME=$(SOLACE_USERNAME) SOLACE_PASSWORD=$(SOLACE_PASSWORD) ./otelcol-dev/otelcol-dev --config custom-collector/collector-config.yaml
+	@SESSION_SSL_TRUST_STORE_DIR=truststore SOLACE_ENDPOINT=$(SOLACE_ENDPOINT) SOLACE_QUEUE=$(SOLACE_QUEUE) SOLACE_USERNAME=$(SOLACE_USERNAME) SOLACE_PASSWORD=$(SOLACE_PASSWORD) SOLACE_VPN=$(SOLACE_VPN) DD_SITE=$(DD_SITE) DD_API_KEY=$(DD_API_KEY) ./otelcol-dev/otelcol-dev --config custom-collector/collector-config.yaml
 
 # Build and start the OpenTelemetry Collector
 rebuild:
@@ -161,3 +161,5 @@ print-env:
 	@echo "SOLACE_USERNAME=$(SOLACE_USERNAME)"
 	@echo "SOLACE_PASSWORD=$(SOLACE_PASSWORD)"
 	@echo "SOLACE_VPN=$(SOLACE_VPN)"
+	@echo "DD_SITE=$(DD_SITE)"
+	@echo "DD_API_KEY=$(DD_API_KEY)"
