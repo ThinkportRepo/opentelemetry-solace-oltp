@@ -62,7 +62,9 @@ jobs:
             type=raw,value=latest
 
       - name: Build Docker image
-        run: docker build -f collector/Dockerfile -t ${{ steps.meta.outputs.tags }} .
+        run: |
+          TAG=$(echo "${{ steps.meta.outputs.tags }}" | cut -d',' -f1)
+          docker build -f collector/Dockerfile -t "$TAG" .
 
       - name: Build and push Docker image
         uses: docker/build-push-action@v5
