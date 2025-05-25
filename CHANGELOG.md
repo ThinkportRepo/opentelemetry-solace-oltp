@@ -1,5 +1,17 @@
 # Changelog
 
+## [0.3.0](https://github.com/ThinkportRepo/opentelemetry-solace-otlp/compare/v0.2.3...v0.3.0) (2025-05-25)
+
+
+### Features
+
+* **actions:** add custom GitHub Action for building and pushing Docker images ([760d793](https://github.com/ThinkportRepo/opentelemetry-solace-otlp/commit/760d793c0885e0018cb5a8d85bb7c5fdea88564a))
+
+
+### Bug Fixes
+
+* trigger release ([fc9bac1](https://github.com/ThinkportRepo/opentelemetry-solace-otlp/commit/fc9bac1a0e120fde68df4d45dcd36def79033cc9))
+
 ## [0.2.3](https://github.com/ThinkportRepo/opentelemetry-solace-otlp/compare/v0.2.2...v0.2.3) (2025-05-25)
 
 
