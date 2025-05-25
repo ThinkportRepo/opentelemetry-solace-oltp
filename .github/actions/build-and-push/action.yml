@@ -1,0 +1,50 @@
+name: 'Build and Push Docker Image'
+description: 'Baut und pushed ein Docker-Image zu einem Registry'
+inputs:
+  registry:
+    required: true
+    description: 'Container Registry'
+  image_name:
+    required: true
+    description: 'Image Name'
+  tag:
+    required: true
+    description: 'Image Tag'
+  github_token:
+    required: true
+    description: 'GitHub Token'
+runs:
+  using: "composite"
+  steps:
+    - name: Set up Go
+      uses: actions/setup-go@v5
+      with:
+        go-version: '1.24.2'
+        cache: true
+    - name: Set up Docker Buildx
+      uses: docker/setup-buildx-action@v3
+    - name: Log in to the Container registry
+      uses: docker/login-action@v3
+      with:
+        registry: ${{ inputs.registry }}
+        username: ${{ github.actor }}
+        password: ${{ inputs.github_token }}
+    - name: Extract metadata (tags, labels) for Docker
+      id: meta
+      uses: docker/metadata-action@v5
+      with:
+        images: ${{ inputs.registry }}/${{ inputs.image_name }}
+        tags: |
+          type=raw,value=${{ inputs.tag }}
+          type=raw,value=latest
+    - name: Build and push Docker image
+      uses: docker/build-push-action@v5
+      with:
+        context: .
+        push: true
+        platforms: linux/amd64
+        tags: ${{ steps.meta.outputs.tags }}
+        labels: ${{ steps.meta.outputs.labels }}
+        cache-from: type=gha
+        cache-to: type=gha,mode=max
+        file: collector/Dockerfile 
