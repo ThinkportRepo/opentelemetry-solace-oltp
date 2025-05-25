@@ -11,25 +11,25 @@ import (
 	"go.opentelemetry.io/collector/receiver"
 	"go.uber.org/zap"
 
-	"github.com/ThinkportRepo/opentelemetry-solace-otlp/receiver/solaceotlpreceiver/internal/base"
 	"github.com/ThinkportRepo/opentelemetry-solace-otlp/receiver/solaceotlpreceiver/internal/message"
+	basereceiver "github.com/ThinkportRepo/opentelemetry-solace-otlp/receiver/solaceotlpreceiver/internal/receiver"
 )
 
 // Receiver handles trace processing
 type Receiver struct {
-	*base.Receiver
+	*basereceiver.BaseReceiver
 	consumer consumer.Traces
 }
 
 // NewReceiver creates a new traces receiver
 func NewReceiver(
 	settings receiver.Settings,
-	config *base.Receiver,
+	config *basereceiver.BaseReceiver,
 	consumer consumer.Traces,
 ) *Receiver {
 	return &Receiver{
-		Receiver: config,
-		consumer: consumer,
+		BaseReceiver: config,
+		consumer:     consumer,
 	}
 }
 
@@ -90,21 +90,6 @@ func min(a, b int) int {
 		return a
 	}
 	return b
-}
-
-// parseBase64Traces attempts to parse base64-encoded OTLP traces
-func (r *Receiver) parseBase64Traces(payload []byte) (ptrace.Traces, error) {
-	decoded, err := base64.StdEncoding.DecodeString(string(payload))
-	if err != nil {
-		return ptrace.Traces{}, err
-	}
-
-	otlpTraces := ptraceotlp.NewExportRequest()
-	if err := otlpTraces.UnmarshalProto(decoded); err != nil {
-		return ptrace.Traces{}, err
-	}
-
-	return otlpTraces.Traces(), nil
 }
 
 // parseJSONTraces attempts to parse JSON traces

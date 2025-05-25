@@ -11,25 +11,25 @@ import (
 	"go.opentelemetry.io/collector/receiver"
 	"go.uber.org/zap"
 
-	"github.com/ThinkportRepo/opentelemetry-solace-otlp/receiver/solaceotlpreceiver/internal/base"
 	"github.com/ThinkportRepo/opentelemetry-solace-otlp/receiver/solaceotlpreceiver/internal/message"
+	basereceiver "github.com/ThinkportRepo/opentelemetry-solace-otlp/receiver/solaceotlpreceiver/internal/receiver"
 )
 
 // Receiver handles log processing
 type Receiver struct {
-	*base.Receiver
+	*basereceiver.BaseReceiver
 	consumer consumer.Logs
 }
 
 // NewReceiver creates a new logs receiver
 func NewReceiver(
 	settings receiver.Settings,
-	config *base.Receiver,
+	config *basereceiver.BaseReceiver,
 	consumer consumer.Logs,
 ) *Receiver {
 	return &Receiver{
-		Receiver: config,
-		consumer: consumer,
+		BaseReceiver: config,
+		consumer:     consumer,
 	}
 }
 
@@ -82,21 +82,6 @@ func (r *Receiver) HandleMessage(message message.InboundMessage) {
 			zap.ByteString("payload_start", payload[:min(32, len(payload))]),
 			zap.Int("payload_length", len(payload)))
 	}
-}
-
-// parseBase64Logs attempts to parse base64-encoded OTLP logs
-func (r *Receiver) parseBase64Logs(payload []byte) (plog.Logs, error) {
-	decoded, err := base64.StdEncoding.DecodeString(string(payload))
-	if err != nil {
-		return plog.Logs{}, err
-	}
-
-	otlpLogs := plogotlp.NewExportRequest()
-	if err := otlpLogs.UnmarshalProto(decoded); err != nil {
-		return plog.Logs{}, err
-	}
-
-	return otlpLogs.Logs(), nil
 }
 
 // parseJSONLogs attempts to parse JSON logs

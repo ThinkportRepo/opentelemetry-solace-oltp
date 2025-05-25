@@ -9,16 +9,16 @@ import (
 
 	"go.uber.org/zap"
 
-	myconfig "github.com/ThinkportRepo/opentelemetry-solace-otlp/receiver/solaceotlpreceiver/config"
+	solaceotlp "github.com/ThinkportRepo/opentelemetry-solace-otlp/receiver/solaceotlpreceiver/config"
 	"solace.dev/go/messaging"
 	"solace.dev/go/messaging/pkg/solace/config"
 	"solace.dev/go/messaging/pkg/solace/resource"
 )
 
-// Client repräsentiert einen Solace-Client
+// Client represents a Solace client
 type Client struct {
 	logger           *zap.Logger
-	config           *myconfig.Config
+	config           *solaceotlp.Config
 	messagingService interface{}
 	queueConsumer    QueueConsumer
 	messageListener  MessageListener
@@ -26,8 +26,8 @@ type Client struct {
 	wg               sync.WaitGroup
 }
 
-// NewClient erstellt einen neuen Solace-Client
-func NewClient(logger *zap.Logger, config *myconfig.Config) *Client {
+// NewClient creates a new Solace client
+func NewClient(logger *zap.Logger, config *solaceotlp.Config) *Client {
 	return &Client{
 		logger:   logger,
 		config:   config,
@@ -35,7 +35,7 @@ func NewClient(logger *zap.Logger, config *myconfig.Config) *Client {
 	}
 }
 
-// Connect verbindet den Client mit Solace
+// Connect connects the client to Solace
 func (c *Client) Connect() error {
 	// Build messaging service from config
 	props := config.ServicePropertyMap{
@@ -80,7 +80,7 @@ func (c *Client) Connect() error {
 	return nil
 }
 
-// Disconnect trennt die Verbindung zum Solace-Server
+// Disconnect disconnects the connection to the Solace server
 func (c *Client) Disconnect() error {
 	// Signal stop to message receiver
 	close(c.stopChan)
@@ -105,7 +105,7 @@ func (c *Client) Disconnect() error {
 	return nil
 }
 
-// GetQueueConsumer gibt den QueueConsumer zurück
+// GetQueueConsumer returns the QueueConsumer
 func (c *Client) GetQueueConsumer() QueueConsumer {
 	return c.queueConsumer
 }
@@ -118,7 +118,7 @@ func (c *Client) getTrustStorePath() string {
 	return filepath.Join(os.Getenv("HOME"), ".solace", "DigiCertGlobalRootCA.crt.pem")
 }
 
-// SetMessageListener setzt den MessageListener für den Client
+// SetMessageListener sets the MessageListener for the client
 func (c *Client) SetMessageListener(listener MessageListener) {
 	c.messageListener = listener
 	if c.queueConsumer != nil {

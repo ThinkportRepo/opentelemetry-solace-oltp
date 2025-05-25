@@ -18,7 +18,7 @@ func NewSolaceInboundMessage(msg message.InboundMessage) message.InboundMessage 
 	return &SolaceInboundMessage{msg: msg}
 }
 
-// GetPayload gibt die Payload der Nachricht zurück
+// GetPayload returns the message payload
 func (m *SolaceInboundMessage) GetPayload() []byte {
 	payload, _ := m.msg.GetPayloadAsBytes()
 	return payload
@@ -33,19 +33,19 @@ func (m *SolaceInboundMessage) GetPayloadAsString() (string, bool) {
 	return string(payload), true
 }
 
-// GetPayloadAsBytes gibt die Payload als Bytes zurück
+// GetPayloadAsBytes returns the payload as bytes
 func (m *SolaceInboundMessage) GetPayloadAsBytes() ([]byte, bool) {
 	return m.msg.GetPayloadAsBytes()
 }
 
-// GetPayloadAsMap gibt die Payload als Map zurück
+// GetPayloadAsMap returns the payload as a map
 func (m *SolaceInboundMessage) GetPayloadAsMap() (sdt.Map, bool) {
-	return nil, false
+	return m.msg.GetPayloadAsMap()
 }
 
-// GetPayloadAsStream gibt die Payload als Stream zurück
+// GetPayloadAsStream returns the payload as a stream
 func (m *SolaceInboundMessage) GetPayloadAsStream() (sdt.Stream, bool) {
-	return nil, false
+	return m.msg.GetPayloadAsStream()
 }
 
 // Dispose disposes the message
@@ -63,97 +63,97 @@ func (m *SolaceInboundMessage) GetApplicationMessageType() (string, bool) {
 	return m.msg.GetApplicationMessageType()
 }
 
-// GetClassOfService gibt die Class of Service zurück
+// GetClassOfService returns the Class of Service
 func (m *SolaceInboundMessage) GetClassOfService() int {
-	return 0
+	return m.msg.GetClassOfService()
 }
 
-// GetCorrelationID gibt die Correlation ID zurück
+// GetCorrelationID returns the Correlation ID
 func (m *SolaceInboundMessage) GetCorrelationID() (string, bool) {
-	return "", false
+	return m.msg.GetCorrelationID()
 }
 
-// GetDestinationName gibt den Zielnamen zurück
+// GetDestinationName returns the destination name
 func (m *SolaceInboundMessage) GetDestinationName() string {
-	return ""
+	return m.msg.GetDestinationName()
 }
 
-// GetExpiration gibt das Ablaufdatum zurück
+// GetExpiration returns the expiration date
 func (m *SolaceInboundMessage) GetExpiration() time.Time {
-	return time.Time{}
+	return m.msg.GetExpiration()
 }
 
-// GetHTTPContentEncoding gibt die HTTP-Content-Encoding zurück
+// GetHTTPContentEncoding returns the HTTP Content Encoding
 func (m *SolaceInboundMessage) GetHTTPContentEncoding() (string, bool) {
-	return "", false
+	return m.msg.GetHTTPContentEncoding()
 }
 
-// GetHTTPContentType gibt den HTTP-Content-Type zurück
+// GetHTTPContentType returns the HTTP Content Type
 func (m *SolaceInboundMessage) GetHTTPContentType() (string, bool) {
-	return "", false
+	return m.msg.GetHTTPContentType()
 }
 
-// GetMessageDiscardNotification gibt die Message-Discard-Notification zurück
+// GetMessageDiscardNotification returns the Message Discard Notification
 func (m *SolaceInboundMessage) GetMessageDiscardNotification() message.MessageDiscardNotification {
-	return nil
+	return m.msg.GetMessageDiscardNotification()
 }
 
-// GetPriority gibt die Priorität der Nachricht zurück
+// GetPriority returns the message priority
 func (m *SolaceInboundMessage) GetPriority() (int, bool) {
 	return m.msg.GetPriority()
 }
 
-// GetProperties gibt die Properties der Nachricht zurück
+// GetProperties returns the message properties
 func (m *SolaceInboundMessage) GetProperties() sdt.Map {
-	return nil
+	return m.msg.GetProperties()
 }
 
-// GetProperty gibt die Property der Nachricht zurück
+// GetProperty returns the message property
 func (m *SolaceInboundMessage) GetProperty(name string) (sdt.Data, bool) {
 	return m.msg.GetProperty(name)
 }
 
-// GetReplicationGroupMessageID gibt die ReplicationGroupMessageID der Nachricht zurück
+// GetReplicationGroupMessageID returns the ReplicationGroupMessageID of the message
 func (m *SolaceInboundMessage) GetReplicationGroupMessageID() (rgmid.ReplicationGroupMessageID, bool) {
 	return m.msg.GetReplicationGroupMessageID()
 }
 
-// GetSenderID gibt die SenderID der Nachricht zurück
+// GetSenderID returns the SenderID
 func (m *SolaceInboundMessage) GetSenderID() (string, bool) {
-	return "", false
+	return m.msg.GetSenderID()
 }
 
-// GetSenderTimestamp gibt den Sender-Timestamp der Nachricht zurück
+// GetSenderTimestamp returns the sender timestamp
 func (m *SolaceInboundMessage) GetSenderTimestamp() (time.Time, bool) {
-	return time.Time{}, false
+	return m.msg.GetSenderTimestamp()
 }
 
-// GetSequenceNumber gibt die Sequence Number der Nachricht zurück
+// GetSequenceNumber returns the sequence number
 func (m *SolaceInboundMessage) GetSequenceNumber() (int64, bool) {
-	return 0, false
+	return m.msg.GetSequenceNumber()
 }
 
-// GetTimeStamp gibt den Zeitstempel der Nachricht zurück
-func (m *SolaceInboundMessage) GetTimeStamp() (time.Time, bool) {
-	return time.Time{}, false
-}
-
-// HasProperty prüft, ob die Nachricht eine Property mit dem gegebenen Namen hat
+// HasProperty checks if the message has a property with the given name
 func (m *SolaceInboundMessage) HasProperty(name string) bool {
-	return false
+	return m.msg.HasProperty(name)
 }
 
-// IsDisposed prüft, ob die Nachricht bereits entsorgt wurde
+// GetTimeStamp returns the message timestamp
+func (m *SolaceInboundMessage) GetTimeStamp() (time.Time, bool) {
+	return m.msg.GetTimeStamp()
+}
+
+// IsDisposed checks if the message has already been disposed
 func (m *SolaceInboundMessage) IsDisposed() bool {
-	return false
+	return m.msg.IsDisposed()
 }
 
-// IsRedelivered prüft, ob die Nachricht erneut zugestellt wurde
+// IsRedelivered checks if the message has been redelivered
 func (m *SolaceInboundMessage) IsRedelivered() bool {
-	return false
+	return m.msg.IsRedelivered()
 }
 
-// String gibt eine String-Repräsentation der Nachricht zurück
+// String returns a string representation of the message
 func (m *SolaceInboundMessage) String() string {
 	return "SolaceInboundMessage"
 }

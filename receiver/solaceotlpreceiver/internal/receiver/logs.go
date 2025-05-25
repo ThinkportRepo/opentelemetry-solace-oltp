@@ -3,7 +3,6 @@ package receiver
 import (
 	"context"
 	"encoding/base64"
-	"encoding/hex"
 	"encoding/json"
 
 	"go.opentelemetry.io/collector/consumer"
@@ -109,18 +108,4 @@ func (r *LogsReceiver) HandleMessage(msg message.InboundMessage) {
 			r.logger.Error("Failed to consume logs", zap.Error(err))
 		}
 	}
-}
-
-// hexStringToTraceID converts a hex string to a TraceID
-func hexStringToTraceID(s string) (pcommon.TraceID, error) {
-	var traceID pcommon.TraceID
-	_, err := hex.Decode(traceID[:], []byte(s))
-	return traceID, err
-}
-
-// hexStringToSpanID converts a hex string to a SpanID
-func hexStringToSpanID(s string) (pcommon.SpanID, error) {
-	var spanID pcommon.SpanID
-	_, err := hex.Decode(spanID[:], []byte(s))
-	return spanID, err
 }
