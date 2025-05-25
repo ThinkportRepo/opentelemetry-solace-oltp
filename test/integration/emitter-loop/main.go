@@ -7,6 +7,7 @@ import (
 	"strconv"
 	"time"
 
+	"github.com/joho/godotenv"
 	"solace.dev/go/messaging"
 	"solace.dev/go/messaging/pkg/solace/config"
 	"solace.dev/go/messaging/pkg/solace/message"
@@ -26,9 +27,10 @@ func getEnv(key, def string) string {
 }
 
 // Define Topic Prefix
-const TopicPrefix = "_telemetry/sample"
+const TopicPrefix = "_telemetry"
 
 func main() {
+	godotenv.Load(".env")
 
 	// Configuration parameters
 	brokerConfig := config.ServicePropertyMap{
@@ -109,7 +111,7 @@ func main() {
 			if err != nil {
 				panic(err)
 			}
-			publishErr := directPublisher.Publish(message, resource.TopicOf(TopicPrefix+"/go/hello/"+uniqueName+"/"+strconv.Itoa(msgSeqNum)))
+			publishErr := directPublisher.Publish(message, resource.TopicOf(TopicPrefix+"/"+uniqueName+"/"+strconv.Itoa(msgSeqNum)))
 			if publishErr != nil {
 				panic(publishErr)
 			}

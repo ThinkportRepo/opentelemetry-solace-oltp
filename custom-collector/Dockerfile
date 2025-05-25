@@ -36,4 +36,4 @@ LABEL org.opencontainers.image.description="OpenTelemetry Collector with Solace 
 LABEL org.opencontainers.image.licenses="GPL-3.0"
 
 # Use our custom binary as entrypoint
-ENTRYPOINT ["/otelcol-solace"] 
+ENTRYPOINT ["/otelcol-solace"]
