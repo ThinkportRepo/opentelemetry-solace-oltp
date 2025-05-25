@@ -12,11 +12,12 @@ import (
 	"github.com/joho/godotenv"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
+	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 	"go.opentelemetry.io/otel/trace"
 	"solace.dev/go/messaging"
 	"solace.dev/go/messaging/pkg/solace"
 	"solace.dev/go/messaging/pkg/solace/config"
-	"solace.dev/go/messaging/pkg/solace/resource"
+	solaceresource "solace.dev/go/messaging/pkg/solace/resource"
 )
 
 type TraceData struct {
@@ -71,8 +72,6 @@ func initSolaceMessaging() (solace.MessagingService, error) {
 	vpnName := os.Getenv("SOLACE_VPN")
 
 	fmt.Println("host", host)
-	fmt.Println("username", username)
-	fmt.Println("password", password)
 	fmt.Println("vpnName", vpnName)
 
 	if host == "" {
@@ -117,135 +116,210 @@ func generateTestData(ctx context.Context, messagingService solace.MessagingServ
 		topic = "default/topic"
 	}
 
-	// Create root span
-	ctx, rootSpan := tracer.Start(ctx, "test_operation")
+	// Create root span for API request
+	ctx, rootSpan := tracer.Start(ctx, "api_request")
 	defer rootSpan.End()
+
+	// Get root span context
+	rootSpanContext := rootSpan.SpanContext()
+	rootTraceID := rootSpanContext.TraceID().String()
+	rootSpanID := rootSpanContext.SpanID().String()
 
 	// Set attributes for root span
 	rootSpan.SetAttributes(
-		attribute.String("test.attribute", "root_value"),
+		attribute.String("http.method", "POST"),
+		attribute.String("http.url", "/api/v1/orders"),
+		attribute.String("http.user_agent", "Mozilla/5.0"),
+		attribute.String("http.request_id", "req-123456"),
 		attribute.String("solace.topic", topic),
 	)
 
-	// Create child span
-	ctx, childSpan := tracer.Start(ctx, "child_operation")
-
-	// Set attributes for child span
-	childSpan.SetAttributes(
-		attribute.String("test.attribute", "child_value"),
-		attribute.String("solace.topic", topic),
+	// Simulate authentication
+	ctx, authSpan := tracer.Start(ctx, "authenticate_user")
+	authSpanContext := authSpan.SpanContext()
+	authSpanID := authSpanContext.SpanID().String()
+	authSpan.SetAttributes(
+		attribute.String("auth.method", "jwt"),
+		attribute.String("auth.user_id", "user-789"),
 	)
+	time.Sleep(50 * time.Millisecond)
+	authSpan.End()
 
-	// Simulate an operation
+	// Simulate database operation
+	ctx, dbSpan := tracer.Start(ctx, "database_operation")
+	dbSpanContext := dbSpan.SpanContext()
+	dbSpanID := dbSpanContext.SpanID().String()
+	dbSpan.SetAttributes(
+		attribute.String("db.system", "postgresql"),
+		attribute.String("db.name", "orders_db"),
+		attribute.String("db.operation", "insert"),
+	)
 	time.Sleep(100 * time.Millisecond)
+	dbSpan.End()
 
-	// Add event to child span
-	childSpan.AddEvent("test_event", trace.WithAttributes(
-		attribute.String("event.attribute", "test_value"),
-		attribute.String("solace.topic", topic),
-		attribute.String("timestamp", time.Now().UTC().Format(time.RFC3339)),
+	// Simulate external service call
+	ctx, serviceSpan := tracer.Start(ctx, "external_service_call")
+	serviceSpanContext := serviceSpan.SpanContext()
+	serviceSpanID := serviceSpanContext.SpanID().String()
+	serviceSpan.SetAttributes(
+		attribute.String("service.name", "payment-service"),
+		attribute.String("service.operation", "process_payment"),
+		attribute.String("service.version", "1.0.0"),
+	)
+
+	// Add events to service span
+	serviceSpan.AddEvent("payment_processing_started", trace.WithAttributes(
+		attribute.String("payment.id", "pay-123"),
+		attribute.Float64("payment.amount", 99.99),
+		attribute.String("currency", "EUR"),
 	))
 
-	// Create trace data for child span
-	childTraceData := TraceData{
-		TraceID:      childSpan.SpanContext().TraceID().String(),
-		SpanID:       childSpan.SpanContext().SpanID().String(),
-		ParentSpanID: rootSpan.SpanContext().SpanID().String(),
-		Name:         "child_operation",
+	time.Sleep(150 * time.Millisecond)
+
+	serviceSpan.AddEvent("payment_processing_completed", trace.WithAttributes(
+		attribute.String("payment.status", "success"),
+		attribute.String("transaction.id", "tx-456"),
+	))
+
+	serviceSpan.End()
+
+	// Create trace data for root span with all child spans
+	rootTraceData := TraceData{
+		TraceID: rootTraceID,
+		SpanID:  rootSpanID,
+		Name:    "api_request",
 		Attributes: map[string]interface{}{
-			"test.attribute": "child_value",
-			"solace.topic":   topic,
+			"http.method":     "POST",
+			"http.url":        "/api/v1/orders",
+			"http.user_agent": "Mozilla/5.0",
+			"http.request_id": "req-123456",
+			"solace.topic":    topic,
 		},
 		Events: []EventData{
 			{
-				Name: "test_event",
+				Name: "request_received",
 				Attributes: map[string]interface{}{
-					"event.attribute": "test_value",
-					"solace.topic":    topic,
-					"timestamp":       time.Now().UTC().Format(time.RFC3339),
+					"timestamp": time.Now().UTC().Format(time.RFC3339),
 				},
 				Time: time.Now(),
 			},
 		},
-		StartTime: time.Now().Add(-100 * time.Millisecond),
+		StartTime: time.Now().Add(-300 * time.Millisecond),
 		EndTime:   time.Now(),
 	}
 
-	// Serialize and send child span data
-	childData, err := json.Marshal(childTraceData)
-	if err != nil {
-		return fmt.Errorf("failed to marshal child trace data: %v", err)
-	}
-
-	// Create and send message
-	messageBuilder := messagingService.MessageBuilder()
-	msg, err := messageBuilder.BuildWithByteArrayPayload(childData)
-	if err != nil {
-		return fmt.Errorf("failed to build message: %v", err)
-	}
-
-	// Create direct message publisher
-	publisher, err := messagingService.CreateDirectMessagePublisherBuilder().Build()
-	if err != nil {
-		return fmt.Errorf("failed to create publisher: %v", err)
-	}
-
-	// Start the publisher
-	if err := publisher.Start(); err != nil {
-		return fmt.Errorf("failed to start publisher: %v", err)
-	}
-	defer publisher.Terminate(1 * time.Second)
-
-	// Publish the message
-	if err := publisher.Publish(msg, resource.TopicOf(topic)); err != nil {
-		return fmt.Errorf("failed to publish message: %v", err)
-	}
-
-	childSpan.End()
-
-	// Create trace data for root span
-	rootTraceData := TraceData{
-		TraceID: rootSpan.SpanContext().TraceID().String(),
-		SpanID:  rootSpan.SpanContext().SpanID().String(),
-		Name:    "test_operation",
+	// Create trace data for child spans
+	authTraceData := TraceData{
+		TraceID:      rootTraceID,
+		SpanID:       authSpanID,
+		ParentSpanID: rootSpanID,
+		Name:         "authenticate_user",
 		Attributes: map[string]interface{}{
-			"test.attribute": "root_value",
-			"solace.topic":   topic,
+			"auth.method":  "jwt",
+			"auth.user_id": "user-789",
 		},
-		Events: []EventData{
-			{
-				Name: "root_event",
-				Attributes: map[string]interface{}{
-					"event.attribute": "root_value",
-					"solace.topic":    topic,
-					"timestamp":       time.Now().UTC().Format(time.RFC3339),
-				},
-				Time: time.Now(),
-			},
+		StartTime: time.Now().Add(-250 * time.Millisecond),
+		EndTime:   time.Now().Add(-200 * time.Millisecond),
+	}
+
+	dbTraceData := TraceData{
+		TraceID:      rootTraceID,
+		SpanID:       dbSpanID,
+		ParentSpanID: rootSpanID,
+		Name:         "database_operation",
+		Attributes: map[string]interface{}{
+			"db.system":    "postgresql",
+			"db.name":      "orders_db",
+			"db.operation": "insert",
 		},
 		StartTime: time.Now().Add(-200 * time.Millisecond),
+		EndTime:   time.Now().Add(-100 * time.Millisecond),
+	}
+
+	serviceTraceData := TraceData{
+		TraceID:      rootTraceID,
+		SpanID:       serviceSpanID,
+		ParentSpanID: rootSpanID,
+		Name:         "external_service_call",
+		Attributes: map[string]interface{}{
+			"service.name":      "payment-service",
+			"service.operation": "process_payment",
+			"service.version":   "1.0.0",
+		},
+		Events: []EventData{
+			{
+				Name: "payment_processing_started",
+				Attributes: map[string]interface{}{
+					"payment.id":     "pay-123",
+					"payment.amount": 99.99,
+					"currency":       "EUR",
+				},
+				Time: time.Now().Add(-150 * time.Millisecond),
+			},
+			{
+				Name: "payment_processing_completed",
+				Attributes: map[string]interface{}{
+					"payment.status": "success",
+					"transaction.id": "tx-456",
+				},
+				Time: time.Now(),
+			},
+		},
+		StartTime: time.Now().Add(-150 * time.Millisecond),
 		EndTime:   time.Now(),
 	}
 
-	// Serialize and send root span data
-	rootData, err := json.Marshal(rootTraceData)
-	if err != nil {
-		return fmt.Errorf("failed to marshal root trace data: %v", err)
-	}
+	// Serialize and send all trace data
+	traceDataList := []TraceData{rootTraceData, authTraceData, dbTraceData, serviceTraceData}
 
-	msg, err = messageBuilder.BuildWithByteArrayPayload(rootData)
-	if err != nil {
-		return fmt.Errorf("failed to build root message: %v", err)
-	}
+	for _, traceData := range traceDataList {
+		data, err := json.Marshal(traceData)
+		if err != nil {
+			return fmt.Errorf("failed to marshal trace data: %v", err)
+		}
 
-	if err := publisher.Publish(msg, resource.TopicOf(topic)); err != nil {
-		return fmt.Errorf("failed to publish root message: %v", err)
+		// Debug output
+		fmt.Printf("Sending trace: %s\n", string(data))
+
+		messageBuilder := messagingService.MessageBuilder()
+		msg, err := messageBuilder.BuildWithByteArrayPayload(data)
+		if err != nil {
+			return fmt.Errorf("failed to build message: %v", err)
+		}
+
+		// Create direct message publisher
+		publisher, err := messagingService.CreateDirectMessagePublisherBuilder().Build()
+		if err != nil {
+			return fmt.Errorf("failed to create publisher: %v", err)
+		}
+
+		// Start the publisher
+		if err := publisher.Start(); err != nil {
+			return fmt.Errorf("failed to start publisher: %v", err)
+		}
+		defer publisher.Terminate(1 * time.Second)
+
+		// Publish the message
+		if err := publisher.Publish(msg, solaceresource.TopicOf(topic)); err != nil {
+			return fmt.Errorf("failed to publish message: %v", err)
+		}
 	}
 
 	return nil
 }
 
+func initTracer() error {
+	tp := sdktrace.NewTracerProvider()
+	otel.SetTracerProvider(tp)
+	return nil
+}
+
 func main() {
+	// Initialize tracer
+	if err := initTracer(); err != nil {
+		log.Fatalf("Failed to initialize tracer: %v", err)
+	}
+
 	// Initialize Solace messaging service
 	messagingService, err := initSolaceMessaging()
 	if err != nil {
