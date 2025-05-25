@@ -1,21 +1,35 @@
 # Build stage
-FROM golang:1.24.2-alpine AS builder
+FROM debian:bullseye-slim AS builder
 
 ARG OCB_VERSION=v0.126.0
 
 # Install build dependencies
-RUN apk add --no-cache make git curl wget unzip build-base
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends \
+    build-essential \
+    make \
+    git \
+    curl \
+    wget \
+    unzip \
+    ca-certificates && \
+    rm -rf /var/lib/apt/lists/*
 
-# Lade das Solace C API Archiv während des Builds herunter
-RUN wget https://products.solace.com/download/SDKPERF_C_LINUX64 -O /tmp/solace-c.tar.gz
+# Install Go
+RUN wget -O /tmp/go.tar.gz https://go.dev/dl/go1.24.2.linux-amd64.tar.gz \
+    && tar -C /usr/local -xzf /tmp/go.tar.gz \
+    && rm /tmp/go.tar.gz
+ENV PATH="/usr/local/go/bin:${PATH}"
 
-# Install Solace C API (solclient)
+# Download Solace C API (glibc)
+RUN wget -O /tmp/solace-c.tar.gz https://products.solace.com/download/C_API_LINUX64
+
+# Entpacken und installieren
 RUN mkdir -p /opt/solace \
     && tar -xzf /tmp/solace-c.tar.gz -C /opt/solace \
-    && rm /tmp/solace-c.tar.gz \
     && cp /opt/solace/solclient*/lib/* /usr/lib/ \
     && cp /opt/solace/solclient*/lib/* /usr/local/lib/ \
-    && cp /opt/solace/solclient*/include/* /usr/include/
+    && cp -r /opt/solace/solclient*/include/* /usr/include/
 
 ENV CGO_ENABLED=1
 ENV LD_LIBRARY_PATH=/usr/lib:/usr/local/lib
