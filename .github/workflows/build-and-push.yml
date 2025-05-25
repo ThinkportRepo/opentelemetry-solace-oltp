@@ -62,20 +62,14 @@ jobs:
             type=raw,value=${{ steps.get_tag.outputs.tag }}
             type=raw,value=latest
 
-      - name: Build Docker image
-        run: |
-          TAG=$(echo "${{ steps.meta.outputs.tags }}" | head -n1)
-          docker buildx build \
-            --file collector/Dockerfile \
-            --tag "$TAG" \
-            .
-
-      - name: Build and push Docker image
+      - name: Build and push Docker image (multiarch)
         uses: docker/build-push-action@v5
         with:
           context: .
           push: true
+          platforms: linux/amd64,linux/arm64
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
+          file: collector/Dockerfile
