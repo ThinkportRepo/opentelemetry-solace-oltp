@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.3.8](https://github.com/ThinkportRepo/opentelemetry-solace-otlp/compare/v0.3.7...v0.3.8) (2025-05-25)
+
+
+### Bug Fixes
+
+* trigger release ([47c5ae5](https://github.com/ThinkportRepo/opentelemetry-solace-otlp/commit/47c5ae55bcbb9cf6611b2ea8a33e86b33b3c48c8))
+* trigger release ([1de1280](https://github.com/ThinkportRepo/opentelemetry-solace-otlp/commit/1de1280cb5ab7a6281c80189a1da3b2b4c8fd185))
+
 ## [0.3.7](https://github.com/ThinkportRepo/opentelemetry-solace-otlp/compare/v0.3.6...v0.3.7) (2025-05-25)
 
 
