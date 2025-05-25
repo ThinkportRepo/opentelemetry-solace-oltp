@@ -15,4 +15,5 @@ runs:
     - name: Run unit tests
       run: |
         cd receiver/solaceotlpreceiver
-        go test -v -coverprofile=coverage.out ./internal/receiver 
+        go test -v -coverprofile=coverage.out ./internal/receiver
+      shell: bash 
