@@ -1,6 +1,5 @@
-name: release-please
-
-description: Automatisiere die Erstellung von Releases und Changelogs mit release-please
+name: Release-Please
+description: Automate new releases and changelogs with release-please
 
 on:
   push:
