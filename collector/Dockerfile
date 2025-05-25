@@ -14,11 +14,11 @@ RUN curl --proto '=https' --tlsv1.2 -fL -o /usr/local/bin/ocb \
 # Set working directory
 WORKDIR /app
 
-# Copy go mod files
+# Copy go mod files from project root
 COPY go.mod go.sum ./
 RUN go mod download
 
-# Copy source code
+# Copy source code from project root
 COPY . .
 
 # Build the collector

@@ -62,8 +62,7 @@ jobs:
             type=raw,value=latest
 
       - name: Build Docker image
-        run: docker build -t my-image-name .
-        working-directory: ./collector
+        run: docker build -f collector/Dockerfile -t ${{ steps.meta.outputs.tags }} .
 
       - name: Build and push Docker image
         uses: docker/build-push-action@v5
