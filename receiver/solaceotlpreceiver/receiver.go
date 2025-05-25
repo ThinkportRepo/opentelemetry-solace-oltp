@@ -199,7 +199,7 @@ func (r *Receiver) Shutdown(ctx context.Context) error {
 
 // HandleMessage processes an incoming message
 func (r *Receiver) HandleMessage(msg message.InboundMessage) {
-	r.logger.Info("HandleMessage called")
+	r.logger.Debug("HandleMessage called")
 	r.wg.Add(1)
 	defer r.wg.Done()
 
@@ -386,8 +386,8 @@ func getTrustStorePath() string {
 }
 
 func acknowledgeMessage(r *Receiver, msg message.InboundMessage) {
-	r.logger.Info("acknowledgeMessage called")
-	r.logger.Info("Trying to acknowledge message", zap.String("queueConsumerType", fmt.Sprintf("%T", r.QueueConsumer)))
+	r.logger.Debug("acknowledgeMessage called")
+	r.logger.Debug("Trying to acknowledge message", zap.String("queueConsumerType", fmt.Sprintf("%T", r.QueueConsumer)))
 	if receiver, ok := r.QueueConsumer.(interface {
 		Ack(message.InboundMessage) error
 	}); ok {
@@ -395,7 +395,7 @@ func acknowledgeMessage(r *Receiver, msg message.InboundMessage) {
 		if err != nil {
 			r.logger.Error("Failed to acknowledge message", zap.Error(err))
 		} else {
-			r.logger.Info("Message acknowledged successfully")
+			r.logger.Debug("Message acknowledged successfully")
 		}
 	} else {
 		r.logger.Warn("QueueConsumer does not implement Ack interface; message not acknowledged", zap.String("actualType", fmt.Sprintf("%T", r.QueueConsumer)))
