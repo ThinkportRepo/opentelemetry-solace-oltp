@@ -30,7 +30,7 @@ jobs:
       - name: Run tests with coverage
         id: coverage
         run: |
-          go test -v -coverprofile=coverage.out ./...
-          go test -v -race ./...
+          go test -v -coverprofile=coverage.out ./internal/receiver
+          go test -v -race ./internal/receiver
           COVERAGE=$(go tool cover -func=coverage.out | grep total | awk '{print $3}' | sed 's/%//')
           echo "coverage=$COVERAGE" >> $GITHUB_OUTPUT

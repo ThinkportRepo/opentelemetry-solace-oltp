@@ -5,7 +5,9 @@ ARG OCB_VERSION=v0.126.0
 
 # Install build dependencies
 RUN apk add --no-cache make git curl wget unzip build-base
-COPY third_party/solace-pubsubplus-c-api-*-linux_x86_64.tar.gz /tmp/solace-c.tar.gz
+
+# Lade das Solace C API Archiv während des Builds herunter
+RUN wget https://products.solace.com/download/SDKPERF_C_LINUX64 -O /tmp/solace-c.tar.gz
 
 # Install Solace C API (solclient)
 RUN mkdir -p /opt/solace \
