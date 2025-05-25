@@ -1,0 +1,14 @@
+name: Test
+description: Run unit tests on every push
+
+on:
+  push:
+    branches: [ '**' ]
+    tags-ignore: [ '*' ]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Run Go Unit Tests
+        uses: ./.github/actions/test 
