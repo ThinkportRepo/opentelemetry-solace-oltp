@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"log"
 	"os"
@@ -125,6 +126,114 @@ func initSolaceMessaging() (solace.MessagingService, error) {
 	return messagingService, nil
 }
 
+// SeverityNumber repräsentiert die OTLP Log Severity Levels
+type SeverityNumber int32
+
+const (
+	SEVERITY_NUMBER_UNSPECIFIED SeverityNumber = 0
+	SEVERITY_NUMBER_TRACE       SeverityNumber = 1
+	SEVERITY_NUMBER_DEBUG       SeverityNumber = 5
+	SEVERITY_NUMBER_INFO        SeverityNumber = 9
+	SEVERITY_NUMBER_WARN        SeverityNumber = 13
+	SEVERITY_NUMBER_ERROR       SeverityNumber = 17
+	SEVERITY_NUMBER_FATAL       SeverityNumber = 21
+)
+
+// KeyValue repräsentiert ein OTLP KeyValue Attribut
+type KeyValue struct {
+	Key   string      `json:"key"`
+	Value interface{} `json:"value"`
+}
+
+// LogRecord repräsentiert einen OTLP Log Record
+type LogRecord struct {
+	TimeUnixNano         int64      `json:"time_unix_nano"`
+	ObservedTimeUnixNano int64      `json:"observed_time_unix_nano"`
+	SeverityNumber       int32      `json:"severity_number"`
+	SeverityText         string     `json:"severity_text"`
+	Body                 string     `json:"body"`
+	Attributes           []KeyValue `json:"attributes"`
+	TraceID              string     `json:"trace_id"`
+	SpanID               string     `json:"span_id"`
+	EventName            string     `json:"event_name,omitempty"`
+}
+
+func getSeverityNumber(severity string) SeverityNumber {
+	switch severity {
+	case "TRACE":
+		return SEVERITY_NUMBER_TRACE
+	case "DEBUG":
+		return SEVERITY_NUMBER_DEBUG
+	case "INFO":
+		return SEVERITY_NUMBER_INFO
+	case "WARN":
+		return SEVERITY_NUMBER_WARN
+	case "ERROR":
+		return SEVERITY_NUMBER_ERROR
+	case "FATAL":
+		return SEVERITY_NUMBER_FATAL
+	default:
+		return SEVERITY_NUMBER_UNSPECIFIED
+	}
+}
+
+func sendLogMessage(messagingService solace.MessagingService, topic string, traceID, spanID string, severity, message string, attributes map[string]string) error {
+	// Create message with log data
+	messageBuilder := messagingService.MessageBuilder()
+
+	// Convert attributes to KeyValue array
+	keyValues := make([]KeyValue, 0, len(attributes))
+	for k, v := range attributes {
+		keyValues = append(keyValues, KeyValue{
+			Key:   k,
+			Value: v,
+		})
+	}
+
+	// Create log record
+	now := time.Now()
+	logRecord := LogRecord{
+		TimeUnixNano:         now.UnixNano(),
+		ObservedTimeUnixNano: now.UnixNano(),
+		SeverityNumber:       int32(getSeverityNumber(severity)),
+		SeverityText:         severity,
+		Body:                 message,
+		Attributes:           keyValues,
+		TraceID:              traceID,
+		SpanID:               spanID,
+	}
+
+	// Convert to JSON
+	jsonData, err := json.Marshal(logRecord)
+	if err != nil {
+		return fmt.Errorf("failed to marshal log message: %v", err)
+	}
+
+	msg, err := messageBuilder.BuildWithStringPayload(string(jsonData))
+	if err != nil {
+		return fmt.Errorf("failed to build message: %v", err)
+	}
+
+	// Create publisher
+	publisher, err := messagingService.CreateDirectMessagePublisherBuilder().Build()
+	if err != nil {
+		return fmt.Errorf("failed to create publisher: %v", err)
+	}
+
+	// Start publisher
+	if err := publisher.Start(); err != nil {
+		return fmt.Errorf("failed to start publisher: %v", err)
+	}
+	defer publisher.Terminate(1 * time.Second)
+
+	// Publish message
+	if err := publisher.Publish(msg, solaceresource.TopicOf(topic)); err != nil {
+		return fmt.Errorf("failed to publish message: %v", err)
+	}
+
+	return nil
+}
+
 func generateTestData(ctx context.Context, messagingService solace.MessagingService) error {
 	tracer := otel.Tracer("test-otlp-sender")
 
@@ -147,12 +256,46 @@ func generateTestData(ctx context.Context, messagingService solace.MessagingServ
 		attribute.String("solace.topic", topic),
 	)
 
+	// Send log message for root span
+	if err := sendLogMessage(
+		messagingService,
+		topic,
+		rootSpan.SpanContext().TraceID().String(),
+		rootSpan.SpanContext().SpanID().String(),
+		"INFO",
+		"Processing new API request",
+		map[string]string{
+			"http.method": "POST",
+			"http.url":    "/api/v1/orders",
+		},
+	); err != nil {
+		return fmt.Errorf("failed to send log message: %v", err)
+	}
+
 	// Simulate authentication
 	ctx, authSpan := tracer.Start(ctx, "authenticate_user")
 	authSpan.SetAttributes(
 		attribute.String("auth.method", "jwt"),
 		attribute.String("auth.user_id", "user-789"),
 	)
+
+	// Send error log for authentication
+	if err := sendLogMessage(
+		messagingService,
+		topic,
+		authSpan.SpanContext().TraceID().String(),
+		authSpan.SpanContext().SpanID().String(),
+		"ERROR",
+		"User not found: id=42",
+		map[string]string{
+			"user.id":     "42",
+			"error.code":  "USER_NOT_FOUND",
+			"auth.method": "jwt",
+		},
+	); err != nil {
+		return fmt.Errorf("failed to send log message: %v", err)
+	}
+
 	time.Sleep(50 * time.Millisecond)
 	authSpan.End()
 
