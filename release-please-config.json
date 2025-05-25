@@ -1,6 +1,17 @@
 {
   "release-type": "go",
   "changelog-path": "CHANGELOG.md",
+  "changelog-sections": {
+    "Features": {
+      "types": ["feat"]
+    },
+    "Bug Fixes": {
+      "types": ["fix"]
+    },
+    "Maintenance": {
+      "types": ["chore", "refactor", "docs"]
+    }
+  },
   "packages": {
     ".": {
       "release-type": "go"
