@@ -22,6 +22,33 @@ Make sure your `.env` file contains the following variables:
 SOLACE_ENDPOINT=your_solace_endpoint
 ```
 
+## Solace Configuration
+
+Before running the test program, ensure the following settings are configured in your Solace broker:
+
+1. **Queue Creation**:
+   - Create a queue named `otlp-traces` (or your preferred name)
+   - Set the queue type to "Standard"
+   - Enable message delivery guarantees (at least once)
+
+2. **Queue Permissions**:
+   - Grant the following permissions to your client username:
+     - `consume`
+     - `send`
+     - `read`
+     - `write`
+
+3. **Message VPN Settings**:
+   - Ensure the Message VPN is configured to allow client connections
+   - Configure appropriate authentication settings (username/password or client certificate)
+   - Set appropriate message size limits (recommended: at least 1MB)
+
+4. **Client Profile**:
+   - Create or modify a client profile with:
+     - Enabled client connections
+     - Appropriate message size limits
+     - Required authentication methods
+
 ## Usage
 
 Run the test program:
