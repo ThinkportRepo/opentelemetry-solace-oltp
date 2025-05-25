@@ -42,7 +42,7 @@ func createTracesReceiver(
 	}
 
 	config := cfg.(*Config)
-	return NewTracesReceiver(settings, config, consumer)
+	return NewReceiver(settings, config, nil, consumer)
 }
 
 // createLogsReceiver creates a new logs receiver
@@ -57,5 +57,5 @@ func createLogsReceiver(
 	}
 
 	config := cfg.(*Config)
-	return NewLogsReceiver(settings, config, consumer)
+	return NewReceiver(settings, config, consumer, nil)
 }

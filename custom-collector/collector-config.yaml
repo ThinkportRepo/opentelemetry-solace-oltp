@@ -47,6 +47,7 @@ service:
       level: debug
       initial_fields:
         component: otelcol
+        receiver: solaceotlp
     metrics:
       level: detailed
 
@@ -58,4 +59,4 @@ service:
     logs:
       receivers: [solaceotlp]
       processors: [memory_limiter, resource, batch]
-      exporters: [datadog]
+      exporters: [debug, datadog]

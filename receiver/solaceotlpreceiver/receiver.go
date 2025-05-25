@@ -13,6 +13,8 @@ import (
 	"go.opentelemetry.io/collector/component"
 	"go.opentelemetry.io/collector/consumer"
 	"go.opentelemetry.io/collector/pdata/pcommon"
+	"go.opentelemetry.io/collector/pdata/plog"
+	"go.opentelemetry.io/collector/pdata/plog/plogotlp"
 	"go.opentelemetry.io/collector/pdata/ptrace"
 	"go.opentelemetry.io/collector/pdata/ptrace/ptraceotlp"
 	"go.uber.org/zap"
@@ -26,49 +28,53 @@ import (
 	"go.opentelemetry.io/collector/receiver"
 )
 
-// TracesReceiver implements the receiver for traces
-type TracesReceiver struct {
-	consumer         consumer.Traces
+// Receiver implementiert den Receiver für Logs und Traces
+type Receiver struct {
+	logsConsumer     consumer.Logs
+	tracesConsumer   consumer.Traces
 	settings         receiver.Settings
 	config           *Config
 	logger           *zap.Logger
 	wg               sync.WaitGroup
-	messagingService interface{} // real SDK or mock
-	QueueConsumer    interface{} // stores the used QueueConsumer
+	messagingService interface{} // kann echtes SDK oder Mock sein
+	QueueConsumer    interface{} // speichert den verwendeten QueueConsumer
 }
 
-// NewTracesReceiver creates a new TracesReceiver
-func NewTracesReceiver(
+// NewReceiver erstellt einen neuen Receiver für Logs und Traces
+func NewReceiver(
 	settings receiver.Settings,
 	config *Config,
-	consumer consumer.Traces,
+	logsConsumer consumer.Logs,
+	tracesConsumer consumer.Traces,
 	opts ...interface{},
-) (*TracesReceiver, error) {
+) (*Receiver, error) {
 	randNum := rand.Intn(1000000)
-	receiver := &TracesReceiver{
-		consumer: consumer,
-		settings: settings,
-		config:   config,
-		logger:   settings.TelemetrySettings.Logger,
+	receiver := &Receiver{
+		logsConsumer:   logsConsumer,
+		tracesConsumer: tracesConsumer,
+		settings:       settings,
+		config:         config,
+		logger:         settings.TelemetrySettings.Logger,
 	}
-	receiver.logger.Info("NewTracesReceiver instance created - Build-Check!", zap.Time("created_at", time.Now()), zap.String("queue", config.Queue), zap.Int("rand", randNum))
+	receiver.logger.Info("NewReceiver instance created",
+		zap.Time("created_at", time.Now()),
+		zap.String("queue", config.Queue),
+		zap.Int("rand", randNum))
+
 	if len(opts) > 0 {
 		receiver.messagingService = opts[0]
 	}
 	return receiver, nil
 }
 
-// Start starts the receiver
-func (r *TracesReceiver) Start(ctx context.Context, host component.Host) error {
-	r.logger.Info("Start() called for TracesReceiver", zap.Time("start_time", time.Now()), zap.String("queue", r.config.Queue))
-
-	r.logger.Info("Starting Solace OTLP traces receiver",
+// Start startet den Receiver
+func (r *Receiver) Start(ctx context.Context, host component.Host) error {
+	r.logger.Info("Starting Solace OTLP receiver",
 		zap.String("endpoint", r.config.Endpoint),
 		zap.String("queue", r.config.Queue))
 
 	// MessagingService initialisieren (SDK oder Mock)
 	if r.messagingService == nil {
-		r.logger.Info("Creating new MessagingService (SDK or Mock)")
 		ms, err := messaging.NewMessagingServiceBuilder().
 			FromConfigurationProvider(config.ServicePropertyMap{
 				config.TransportLayerPropertyHost:                   r.config.Endpoint,
@@ -87,8 +93,6 @@ func (r *TracesReceiver) Start(ctx context.Context, host component.Host) error {
 		r.messagingService = ms
 	}
 
-	r.logger.Info("MessagingService instance type", zap.String("type", fmt.Sprintf("%T", r.messagingService)))
-
 	var err error
 	type queueConsumerBuilderIface interface {
 		WithMessageAutoAcknowledgement() queueConsumerBuilderIface
@@ -96,6 +100,7 @@ func (r *TracesReceiver) Start(ctx context.Context, host component.Host) error {
 		WithClientName(string) queueConsumerBuilderIface
 		Build(resource.Queue) (interface{ Start() error }, error)
 	}
+
 	switch ms := r.messagingService.(type) {
 	case interface {
 		Connect() error
@@ -111,23 +116,19 @@ func (r *TracesReceiver) Start(ctx context.Context, host component.Host) error {
 		if !ok {
 			return fmt.Errorf("queue consumer builder does not implement required interface")
 		}
-		r.logger.Info("Building QueueConsumer …")
 		queueConsumer, err := builder.
 			WithMessageListener(r.HandleMessage).
-			WithClientName("trace").
+			WithClientName("otlp-receiver").
 			Build(*resource.QueueDurableExclusive(r.config.Queue))
 		if err != nil {
 			return fmt.Errorf("failed to create queue consumer: %w", err)
 		}
-		r.logger.Info("MessageListener registered!")
 		r.QueueConsumer = queueConsumer
-		r.logger.Info("QueueConsumer instance created", zap.Time("created_at", time.Now()), zap.String("queue", r.config.Queue))
-		r.logger.Info("Starting QueueConsumer …")
 		err = queueConsumer.Start()
 		if err != nil {
 			return fmt.Errorf("failed to start queue consumer: %w", err)
 		}
-		r.logger.Info("QueueConsumer started", zap.Time("started_at", time.Now()), zap.String("queue", r.config.Queue))
+
 	case mocks.MessagingService:
 		r.logger.Info("Using Mock MessagingService")
 		err = ms.Connect()
@@ -137,7 +138,7 @@ func (r *TracesReceiver) Start(ctx context.Context, host component.Host) error {
 		queueConsumerBuilder := ms.CreateQueueConsumerBuilder()
 		queueConsumer, err := queueConsumerBuilder.
 			WithMessageListener(r.HandleMessage).
-			WithClientName("trace-consumer").
+			WithClientName("otlp-receiver-mock").
 			Build(*resource.QueueDurableExclusive(r.config.Queue))
 		if err != nil {
 			return fmt.Errorf("failed to create queue consumer (mock): %w", err)
@@ -149,6 +150,7 @@ func (r *TracesReceiver) Start(ctx context.Context, host component.Host) error {
 			}
 		}
 		r.QueueConsumer = queueConsumer
+
 	case solace.MessagingService:
 		r.logger.Info("Using real Solace SDK MessagingService")
 		err = ms.Connect()
@@ -168,20 +170,18 @@ func (r *TracesReceiver) Start(ctx context.Context, host component.Host) error {
 			return fmt.Errorf("failed to register message handler: %w", regErr)
 		}
 		r.QueueConsumer = receiver
+
 	default:
-		r.logger.Error("Unknown MessagingService type!", zap.Any("type", ms))
 		return fmt.Errorf("unsupported messagingService type")
 	}
 
-	r.logger.Info("Solace OTLP traces receiver started successfully!")
+	r.logger.Info("Solace OTLP receiver started successfully!")
 	return nil
 }
 
-// Shutdown stops the receiver
-func (r *TracesReceiver) Shutdown(ctx context.Context) error {
-	r.logger.Info("Shutdown() called for TracesReceiver", zap.Time("shutdown_time", time.Now()), zap.String("queue", r.config.Queue))
-	r.logger.Info("Shutting down Solace OTLP traces receiver")
-	// Hier ggf. weitere Aufräumarbeiten, z.B. Disconnect
+// Shutdown beendet den Receiver
+func (r *Receiver) Shutdown(ctx context.Context) error {
+	r.logger.Info("Shutting down Solace OTLP receiver")
 	if r.QueueConsumer != nil {
 		if terminator, ok := r.QueueConsumer.(interface{ Terminate(uint) error }); ok {
 			_ = terminator.Terminate(10)
@@ -195,23 +195,96 @@ func (r *TracesReceiver) Shutdown(ctx context.Context) error {
 	return nil
 }
 
-// HandleMessage processes an incoming message
-func (r *TracesReceiver) HandleMessage(msg message.InboundMessage) {
-	r.logger.Debug("HandleMessage called!")
-
+// HandleMessage verarbeitet eine eingehende Nachricht
+func (r *Receiver) HandleMessage(msg message.InboundMessage) {
 	r.wg.Add(1)
 	defer r.wg.Done()
 
-	payload, ok := msg.GetPayloadAsString()
-	r.logger.Debug("Payload received", zap.Bool("ok", ok))
+	// Versuche zuerst als OTLP Log zu parsen
+	payload, ok := msg.GetPayloadAsBytes()
+	if ok {
+		otlpLogs := plogotlp.NewExportRequest()
+		if err := otlpLogs.UnmarshalProto(payload); err == nil {
+			if err := r.logsConsumer.ConsumeLogs(context.Background(), otlpLogs.Logs()); err != nil {
+				r.logger.Error("Failed to consume logs", zap.Error(err))
+			}
+			return
+		}
+	}
+
+	// Versuche als JSON Log zu parsen
+	payloadStr, ok := msg.GetPayloadAsString()
 	if !ok {
 		r.logger.Error("Failed to get message payload")
 		return
 	}
 
-	r.logger.Debug("[TEST] Payload content", zap.String("payload", payload))
+	// Parse JSON payload für Log
+	var logData struct {
+		TimeUnixNano         int64  `json:"time_unix_nano"`
+		ObservedTimeUnixNano int64  `json:"observed_time_unix_nano"`
+		SeverityNumber       int32  `json:"severity_number"`
+		SeverityText         string `json:"severity_text"`
+		Body                 string `json:"body"`
+		Attributes           []struct {
+			Key   string      `json:"key"`
+			Value interface{} `json:"value"`
+		} `json:"attributes"`
+		TraceID   string `json:"trace_id"`
+		SpanID    string `json:"span_id"`
+		EventName string `json:"event_name,omitempty"`
+	}
 
-	// Parse JSON payload
+	if err := json.Unmarshal([]byte(payloadStr), &logData); err == nil {
+		// Create OTLP log
+		otlpLogs := plogotlp.NewExportRequest()
+		logs := otlpLogs.Logs()
+		resourceLogs := logs.ResourceLogs().AppendEmpty()
+		scopeLogs := resourceLogs.ScopeLogs().AppendEmpty()
+		logRecord := scopeLogs.LogRecords().AppendEmpty()
+
+		// Set log data
+		logRecord.SetTimestamp(pcommon.Timestamp(logData.TimeUnixNano))
+		logRecord.SetObservedTimestamp(pcommon.Timestamp(logData.ObservedTimeUnixNano))
+		logRecord.SetSeverityNumber(plog.SeverityNumber(logData.SeverityNumber))
+		logRecord.SetSeverityText(logData.SeverityText)
+		logRecord.Body().SetStr(logData.Body)
+
+		// Set attributes
+		for _, attr := range logData.Attributes {
+			switch v := attr.Value.(type) {
+			case string:
+				logRecord.Attributes().PutStr(attr.Key, v)
+			case float64:
+				logRecord.Attributes().PutDouble(attr.Key, v)
+			case bool:
+				logRecord.Attributes().PutBool(attr.Key, v)
+			case int:
+				logRecord.Attributes().PutInt(attr.Key, int64(v))
+			}
+		}
+
+		// Set trace context if available
+		if logData.TraceID != "" {
+			traceID, err := hexStringToTraceID(logData.TraceID)
+			if err == nil {
+				logRecord.SetTraceID(traceID)
+			}
+		}
+		if logData.SpanID != "" {
+			spanID, err := hexStringToSpanID(logData.SpanID)
+			if err == nil {
+				logRecord.SetSpanID(spanID)
+			}
+		}
+
+		if err := r.logsConsumer.ConsumeLogs(context.Background(), logs); err != nil {
+			r.logger.Error("Failed to consume logs", zap.Error(err))
+		}
+		return
+	}
+
+	// Wenn kein Log, versuche als Trace zu parsen
 	var traceData struct {
 		TraceID      string `json:"trace_id"`
 		SpanID       string `json:"span_id"`
@@ -226,7 +299,7 @@ func (r *TracesReceiver) HandleMessage(msg message.InboundMessage) {
 		} `json:"status"`
 	}
 
-	if err := json.Unmarshal([]byte(payload), &traceData); err != nil {
+	if err := json.Unmarshal([]byte(payloadStr), &traceData); err != nil {
 		r.logger.Error("Failed to unmarshal trace data", zap.Error(err))
 		return
 	}
@@ -266,43 +339,34 @@ func (r *TracesReceiver) HandleMessage(msg message.InboundMessage) {
 	span.Status().SetCode(ptrace.StatusCode(traceData.Status.Code))
 	span.Status().SetMessage(traceData.Status.Message)
 
-	r.logger.Debug("Trace successfully deserialized, forwarding to consumer...")
-	if err := r.consumer.ConsumeTraces(context.Background(), traces); err != nil {
+	if err := r.tracesConsumer.ConsumeTraces(context.Background(), traces); err != nil {
 		r.logger.Error("Failed to consume traces", zap.Error(err))
 		return
 	}
+
+	// Acknowledge message if supported
 	if receiver, ok := r.QueueConsumer.(interface {
 		Ack(message.InboundMessage) error
 	}); ok {
 		if err := receiver.Ack(msg); err != nil {
 			r.logger.Error("Failed to acknowledge message", zap.Error(err))
 		}
-	} else {
-		r.logger.Error("QueueConsumer does not support Ack", zap.String("type", fmt.Sprintf("%T", r.QueueConsumer)))
 	}
-	r.logger.Info("MessageListener registered!")
 }
 
-// hexStringToTraceID converts a hex string to a TraceID
+// Hilfsfunktionen
 func hexStringToTraceID(s string) (pcommon.TraceID, error) {
 	var traceID pcommon.TraceID
 	_, err := hex.Decode(traceID[:], []byte(s))
 	return traceID, err
 }
 
-// hexStringToSpanID converts a hex string to a SpanID
 func hexStringToSpanID(s string) (pcommon.SpanID, error) {
 	var spanID pcommon.SpanID
 	_, err := hex.Decode(spanID[:], []byte(s))
 	return spanID, err
 }
 
-// GetVPN returns the VPN configuration
-func (r *TracesReceiver) GetVPN() string {
-	return r.config.VPN
-}
-
-// getTrustStorePath returns the truststore path from environment variable or default
 func getTrustStorePath() string {
 	if path := os.Getenv("SESSION_SSL_TRUST_STORE_DIR"); path != "" {
 		return path

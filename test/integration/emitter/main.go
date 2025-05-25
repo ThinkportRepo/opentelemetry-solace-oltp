@@ -2,12 +2,17 @@ package main
 
 import (
 	"context"
-	"encoding/json"
+	"encoding/base64"
+	"encoding/hex"
 	"fmt"
 	"log"
 	"os"
 	"path/filepath"
 	"time"
+
+	common_v1 "github.com/ThinkportRepo/opentelemetry-solace-otlp/opentelemetry/proto/proto/common/v1"
+	logs_v1 "github.com/ThinkportRepo/opentelemetry-solace-otlp/opentelemetry/proto/proto/logs/v1"
+	resource_v1 "github.com/ThinkportRepo/opentelemetry-solace-otlp/opentelemetry/proto/proto/resource/v1"
 
 	"github.com/joho/godotenv"
 	"go.opentelemetry.io/otel"
@@ -16,6 +21,7 @@ import (
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 	semconv "go.opentelemetry.io/otel/semconv/v1.4.0"
 	"go.opentelemetry.io/otel/trace"
+	"google.golang.org/protobuf/proto"
 	"solace.dev/go/messaging"
 	"solace.dev/go/messaging/pkg/solace"
 	"solace.dev/go/messaging/pkg/solace/config"
@@ -178,55 +184,68 @@ func getSeverityNumber(severity string) SeverityNumber {
 }
 
 func sendLogMessage(messagingService solace.MessagingService, topic string, traceID, spanID string, severity, message string, attributes map[string]string) error {
-	// Create message with log data
 	messageBuilder := messagingService.MessageBuilder()
 
-	// Convert attributes to KeyValue array
-	keyValues := make([]KeyValue, 0, len(attributes))
+	// TraceID und SpanID als Bytes
+	traceIDBytes, _ := hex.DecodeString(traceID)
+	spanIDBytes, _ := hex.DecodeString(spanID)
+
+	// Attribute als KeyValue
+	keyValues := make([]*common_v1.KeyValue, 0, len(attributes))
 	for k, v := range attributes {
-		keyValues = append(keyValues, KeyValue{
+		keyValues = append(keyValues, &common_v1.KeyValue{
 			Key:   k,
-			Value: v,
+			Value: &common_v1.AnyValue{Value: &common_v1.AnyValue_StringValue{StringValue: v}},
 		})
 	}
 
-	// Create log record
-	now := time.Now()
-	logRecord := LogRecord{
-		TimeUnixNano:         now.UnixNano(),
-		ObservedTimeUnixNano: now.UnixNano(),
-		SeverityNumber:       int32(getSeverityNumber(severity)),
-		SeverityText:         severity,
-		Body:                 message,
-		Attributes:           keyValues,
-		TraceID:              traceID,
-		SpanID:               spanID,
+	logRecord := &logs_v1.LogRecord{
+		TimeUnixNano:   uint64(time.Now().UnixNano()),
+		SeverityNumber: logs_v1.SeverityNumber(logs_v1.SeverityNumber_value["SEVERITY_NUMBER_"+severity]),
+		SeverityText:   severity,
+		Body:           &common_v1.AnyValue{Value: &common_v1.AnyValue_StringValue{StringValue: message}},
+		TraceId:        traceIDBytes,
+		SpanId:         spanIDBytes,
+		Attributes:     keyValues,
 	}
 
-	// Convert to JSON
-	jsonData, err := json.Marshal(logRecord)
+	exportRequest := &logs_v1.ExportLogsServiceRequest{
+		ResourceLogs: []*logs_v1.ResourceLogs{
+			{
+				Resource: &resource_v1.Resource{
+					Attributes: []*common_v1.KeyValue{
+						{Key: "service.name", Value: &common_v1.AnyValue{Value: &common_v1.AnyValue_StringValue{StringValue: "test-otlp-sender"}}},
+					},
+				},
+				ScopeLogs: []*logs_v1.ScopeLogs{
+					{
+						LogRecords: []*logs_v1.LogRecord{logRecord},
+					},
+				},
+			},
+		},
+	}
+
+	data, err := proto.Marshal(exportRequest)
 	if err != nil {
-		return fmt.Errorf("failed to marshal log message: %v", err)
+		return fmt.Errorf("failed to marshal OTLP log: %v", err)
 	}
 
-	msg, err := messageBuilder.BuildWithStringPayload(string(jsonData))
+	msg, err := messageBuilder.BuildWithStringPayload(base64.StdEncoding.EncodeToString(data))
 	if err != nil {
 		return fmt.Errorf("failed to build message: %v", err)
 	}
 
-	// Create publisher
 	publisher, err := messagingService.CreateDirectMessagePublisherBuilder().Build()
 	if err != nil {
 		return fmt.Errorf("failed to create publisher: %v", err)
 	}
 
-	// Start publisher
 	if err := publisher.Start(); err != nil {
 		return fmt.Errorf("failed to start publisher: %v", err)
 	}
 	defer publisher.Terminate(1 * time.Second)
 
-	// Publish message
 	if err := publisher.Publish(msg, solaceresource.TopicOf(topic)); err != nil {
 		return fmt.Errorf("failed to publish message: %v", err)
 	}
