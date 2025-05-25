@@ -51,7 +51,7 @@ func NewTracesReceiver(
 		config:   config,
 		logger:   settings.TelemetrySettings.Logger,
 	}
-	receiver.logger.Info("[TEST] NewTracesReceiver instance created - Build-Check!", zap.Time("created_at", time.Now()), zap.String("queue", config.Queue), zap.Int("rand", randNum))
+	receiver.logger.Info("NewTracesReceiver instance created - Build-Check!", zap.Time("created_at", time.Now()), zap.String("queue", config.Queue), zap.Int("rand", randNum))
 	if len(opts) > 0 {
 		receiver.messagingService = opts[0]
 	}
@@ -113,14 +113,13 @@ func (r *TracesReceiver) Start(ctx context.Context, host component.Host) error {
 		}
 		r.logger.Info("Building QueueConsumer …")
 		queueConsumer, err := builder.
-			WithMessageAutoAcknowledgement().
 			WithMessageListener(r.HandleMessage).
 			WithClientName("trace").
 			Build(*resource.QueueDurableExclusive(r.config.Queue))
 		if err != nil {
 			return fmt.Errorf("failed to create queue consumer: %w", err)
 		}
-		r.logger.Info("[TEST] MessageListener registered!")
+		r.logger.Info("MessageListener registered!")
 		r.QueueConsumer = queueConsumer
 		r.logger.Info("QueueConsumer instance created", zap.Time("created_at", time.Now()), zap.String("queue", r.config.Queue))
 		r.logger.Info("Starting QueueConsumer …")
@@ -137,7 +136,6 @@ func (r *TracesReceiver) Start(ctx context.Context, host component.Host) error {
 		}
 		queueConsumerBuilder := ms.CreateQueueConsumerBuilder()
 		queueConsumer, err := queueConsumerBuilder.
-			WithMessageAutoAcknowledgement().
 			WithMessageListener(r.HandleMessage).
 			WithClientName("trace-consumer").
 			Build(*resource.QueueDurableExclusive(r.config.Queue))
@@ -199,19 +197,19 @@ func (r *TracesReceiver) Shutdown(ctx context.Context) error {
 
 // HandleMessage processes an incoming message
 func (r *TracesReceiver) HandleMessage(msg message.InboundMessage) {
-	r.logger.Debug("[TEST] HandleMessage called!")
+	r.logger.Debug("HandleMessage called!")
 
 	r.wg.Add(1)
 	defer r.wg.Done()
 
 	payload, ok := msg.GetPayloadAsString()
-	r.logger.Debug("[TEST] Payload received", zap.Bool("ok", ok))
+	r.logger.Debug("Payload received", zap.Bool("ok", ok))
 	if !ok {
 		r.logger.Error("Failed to get message payload")
 		return
 	}
 
-	r.logger.Debug("[TEST] Payload length", zap.Int("len", len(payload)))
+	r.logger.Debug("[TEST] Payload content", zap.String("payload", payload))
 
 	// Parse JSON payload
 	var traceData struct {
@@ -268,12 +266,21 @@ func (r *TracesReceiver) HandleMessage(msg message.InboundMessage) {
 	span.Status().SetCode(ptrace.StatusCode(traceData.Status.Code))
 	span.Status().SetMessage(traceData.Status.Message)
 
-	r.logger.Debug("[TEST] Trace successfully deserialized, forwarding to consumer...")
+	r.logger.Debug("Trace successfully deserialized, forwarding to consumer...")
 	if err := r.consumer.ConsumeTraces(context.Background(), traces); err != nil {
 		r.logger.Error("Failed to consume traces", zap.Error(err))
 		return
 	}
-	r.logger.Info("[TEST] MessageListener registered!")
+	if receiver, ok := r.QueueConsumer.(interface {
+		Ack(message.InboundMessage) error
+	}); ok {
+		if err := receiver.Ack(msg); err != nil {
+			r.logger.Error("Failed to acknowledge message", zap.Error(err))
+		}
+	} else {
+		r.logger.Error("QueueConsumer does not support Ack", zap.String("type", fmt.Sprintf("%T", r.QueueConsumer)))
+	}
+	r.logger.Info("MessageListener registered!")
 }
 
 // hexStringToTraceID converts a hex string to a TraceID
