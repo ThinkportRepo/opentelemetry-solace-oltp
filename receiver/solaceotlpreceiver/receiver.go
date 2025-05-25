@@ -2,6 +2,7 @@ package solaceotlpreceiver
 
 import (
 	"context"
+	"encoding/base64"
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
@@ -200,9 +201,17 @@ func (r *Receiver) HandleMessage(msg message.InboundMessage) {
 	r.wg.Add(1)
 	defer r.wg.Done()
 
-	// Versuche zuerst als OTLP Log zu parsen
-	payload, ok := msg.GetPayloadAsBytes()
-	if ok {
+	// Versuche zuerst als base64-kodierte OTLP Log zu parsen
+	payloadStr, ok := msg.GetPayloadAsString()
+	if !ok {
+		r.logger.Error("Failed to get message payload")
+		return
+	}
+
+	// Versuche base64-Dekodierung
+	payload, err := base64.StdEncoding.DecodeString(payloadStr)
+	if err == nil {
+		// Versuche als OTLP Log zu parsen
 		otlpLogs := plogotlp.NewExportRequest()
 		if err := otlpLogs.UnmarshalProto(payload); err == nil {
 			if err := r.logsConsumer.ConsumeLogs(context.Background(), otlpLogs.Logs()); err != nil {
@@ -210,16 +219,18 @@ func (r *Receiver) HandleMessage(msg message.InboundMessage) {
 			}
 			return
 		}
+
+		// Versuche als OTLP Trace zu parsen
+		otlpTraces := ptraceotlp.NewExportRequest()
+		if err := otlpTraces.UnmarshalProto(payload); err == nil {
+			if err := r.tracesConsumer.ConsumeTraces(context.Background(), otlpTraces.Traces()); err != nil {
+				r.logger.Error("Failed to consume traces", zap.Error(err))
+			}
+			return
+		}
 	}
 
 	// Versuche als JSON Log zu parsen
-	payloadStr, ok := msg.GetPayloadAsString()
-	if !ok {
-		r.logger.Error("Failed to get message payload")
-		return
-	}
-
-	// Parse JSON payload für Log
 	var logData struct {
 		TimeUnixNano         int64  `json:"time_unix_nano"`
 		ObservedTimeUnixNano int64  `json:"observed_time_unix_nano"`
@@ -284,7 +295,7 @@ func (r *Receiver) HandleMessage(msg message.InboundMessage) {
 		return
 	}
 
-	// Wenn kein Log, versuche als Trace zu parsen
+	// Wenn kein Log, versuche als JSON Trace zu parsen
 	var traceData struct {
 		TraceID      string `json:"trace_id"`
 		SpanID       string `json:"span_id"`
