@@ -2,6 +2,8 @@ name: Test, Build and Push
 description: Test, Build and Push Docker image to GitHub Container Registry
 
 on:
+  push:
+    tags: ["v*"]
   release:
     types: [released]
 
