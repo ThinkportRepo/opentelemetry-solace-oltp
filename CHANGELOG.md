@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.3.1](https://github.com/ThinkportRepo/opentelemetry-solace-otlp/compare/v0.3.0...v0.3.1) (2025-05-25)
+
+
+### Bug Fixes
+
+* trigger release ([dc8befc](https://github.com/ThinkportRepo/opentelemetry-solace-otlp/commit/dc8befc20490ba7473038dc8fa94f50c0f190de1))
+* **workflow:** remove redundant parentheses in build-and-push job condition to simplify expression ([66c5b66](https://github.com/ThinkportRepo/opentelemetry-solace-otlp/commit/66c5b66e10378b9babc7f06992f39042c414545a))
+
 ## [0.3.0](https://github.com/ThinkportRepo/opentelemetry-solace-otlp/compare/v0.2.3...v0.3.0) (2025-05-25)
 
 
