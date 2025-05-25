@@ -1,0 +1,18 @@
+name: 'Run Go Unit Tests'
+description: 'Checkt das Repo aus, richtet Go ein und führt die Unit-Tests aus.'
+runs:
+  using: "composite"
+  steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+    - name: Set up Go
+      uses: actions/setup-go@v5
+      with:
+        go-version: '1.24.2'
+        cache: true
+    - name: Run unit tests
+      run: |
+        cd receiver/solaceotlpreceiver
+        go test -v -coverprofile=coverage.out ./internal/receiver 
