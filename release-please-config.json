@@ -1,6 +1,5 @@
 {
   "release-type": "go",
-  "branches": ["main"],
   "changelog-path": "CHANGELOG.md",
   "packages": {
     ".": {
