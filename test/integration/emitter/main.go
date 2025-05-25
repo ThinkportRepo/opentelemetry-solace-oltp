@@ -2,7 +2,6 @@ package main
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"log"
 	"os"
@@ -12,7 +11,9 @@ import (
 	"github.com/joho/godotenv"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/sdk/resource"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
+	semconv "go.opentelemetry.io/otel/semconv/v1.4.0"
 	"go.opentelemetry.io/otel/trace"
 	"solace.dev/go/messaging"
 	"solace.dev/go/messaging/pkg/solace"
@@ -20,21 +21,60 @@ import (
 	solaceresource "solace.dev/go/messaging/pkg/solace/resource"
 )
 
-type TraceData struct {
-	TraceID      string                 `json:"trace_id"`
-	SpanID       string                 `json:"span_id"`
-	ParentSpanID string                 `json:"parent_span_id,omitempty"`
-	Name         string                 `json:"name"`
-	Attributes   map[string]interface{} `json:"attributes"`
-	Events       []EventData            `json:"events,omitempty"`
-	StartTime    time.Time              `json:"start_time"`
-	EndTime      time.Time              `json:"end_time"`
+type solaceExporter struct {
+	messagingService solace.MessagingService
+	topic            string
 }
 
-type EventData struct {
-	Name       string                 `json:"name"`
-	Attributes map[string]interface{} `json:"attributes"`
-	Time       time.Time              `json:"time"`
+func newSolaceExporter(messagingService solace.MessagingService, topic string) *solaceExporter {
+	return &solaceExporter{
+		messagingService: messagingService,
+		topic:            topic,
+	}
+}
+
+func (e *solaceExporter) ExportSpans(ctx context.Context, spans []sdktrace.ReadOnlySpan) error {
+	for _, span := range spans {
+		// Create message with span data
+		messageBuilder := e.messagingService.MessageBuilder()
+		msg, err := messageBuilder.BuildWithStringPayload(fmt.Sprintf(
+			`{"trace_id":"%s","span_id":"%s","parent_span_id":"%s","name":"%s","kind":%d,"start_time":%d,"end_time":%d,"status":{"code":%d,"message":"%s"}}`,
+			span.SpanContext().TraceID().String(),
+			span.SpanContext().SpanID().String(),
+			span.Parent().SpanID().String(),
+			span.Name(),
+			span.SpanKind(),
+			span.StartTime().UnixNano(),
+			span.EndTime().UnixNano(),
+			span.Status().Code,
+			span.Status().Description,
+		))
+		if err != nil {
+			return fmt.Errorf("failed to build message: %v", err)
+		}
+
+		// Create publisher
+		publisher, err := e.messagingService.CreateDirectMessagePublisherBuilder().Build()
+		if err != nil {
+			return fmt.Errorf("failed to create publisher: %v", err)
+		}
+
+		// Start publisher
+		if err := publisher.Start(); err != nil {
+			return fmt.Errorf("failed to start publisher: %v", err)
+		}
+		defer publisher.Terminate(1 * time.Second)
+
+		// Publish message
+		if err := publisher.Publish(msg, solaceresource.TopicOf(e.topic)); err != nil {
+			return fmt.Errorf("failed to publish message: %v", err)
+		}
+	}
+	return nil
+}
+
+func (e *solaceExporter) Shutdown(ctx context.Context) error {
+	return nil
 }
 
 func initSolaceMessaging() (solace.MessagingService, error) {
@@ -98,11 +138,6 @@ func generateTestData(ctx context.Context, messagingService solace.MessagingServ
 	ctx, rootSpan := tracer.Start(ctx, "api_request")
 	defer rootSpan.End()
 
-	// Get root span context
-	rootSpanContext := rootSpan.SpanContext()
-	rootTraceID := rootSpanContext.TraceID().String()
-	rootSpanID := rootSpanContext.SpanID().String()
-
 	// Set attributes for root span
 	rootSpan.SetAttributes(
 		attribute.String("http.method", "POST"),
@@ -114,8 +149,6 @@ func generateTestData(ctx context.Context, messagingService solace.MessagingServ
 
 	// Simulate authentication
 	ctx, authSpan := tracer.Start(ctx, "authenticate_user")
-	authSpanContext := authSpan.SpanContext()
-	authSpanID := authSpanContext.SpanID().String()
 	authSpan.SetAttributes(
 		attribute.String("auth.method", "jwt"),
 		attribute.String("auth.user_id", "user-789"),
@@ -125,8 +158,6 @@ func generateTestData(ctx context.Context, messagingService solace.MessagingServ
 
 	// Simulate database operation
 	ctx, dbSpan := tracer.Start(ctx, "database_operation")
-	dbSpanContext := dbSpan.SpanContext()
-	dbSpanID := dbSpanContext.SpanID().String()
 	dbSpan.SetAttributes(
 		attribute.String("db.system", "postgresql"),
 		attribute.String("db.name", "orders_db"),
@@ -137,8 +168,6 @@ func generateTestData(ctx context.Context, messagingService solace.MessagingServ
 
 	// Simulate external service call
 	_, serviceSpan := tracer.Start(ctx, "external_service_call")
-	serviceSpanContext := serviceSpan.SpanContext()
-	serviceSpanID := serviceSpanContext.SpanID().String()
 	serviceSpan.SetAttributes(
 		attribute.String("service.name", "payment-service"),
 		attribute.String("service.operation", "process_payment"),
@@ -161,157 +190,67 @@ func generateTestData(ctx context.Context, messagingService solace.MessagingServ
 
 	serviceSpan.End()
 
-	// Create trace data for root span with all child spans
-	rootTraceData := TraceData{
-		TraceID: rootTraceID,
-		SpanID:  rootSpanID,
-		Name:    "api_request",
-		Attributes: map[string]interface{}{
-			"http.method":     "POST",
-			"http.url":        "/api/v1/orders",
-			"http.user_agent": "Mozilla/5.0",
-			"http.request_id": "req-123456",
-			"solace.topic":    topic,
-		},
-		Events: []EventData{
-			{
-				Name: "request_received",
-				Attributes: map[string]interface{}{
-					"timestamp": time.Now().UTC().Format(time.RFC3339),
-				},
-				Time: time.Now(),
-			},
-		},
-		StartTime: time.Now().Add(-300 * time.Millisecond),
-		EndTime:   time.Now(),
-	}
-
-	// Create trace data for child spans
-	authTraceData := TraceData{
-		TraceID:      rootTraceID,
-		SpanID:       authSpanID,
-		ParentSpanID: rootSpanID,
-		Name:         "authenticate_user",
-		Attributes: map[string]interface{}{
-			"auth.method":  "jwt",
-			"auth.user_id": "user-789",
-		},
-		StartTime: time.Now().Add(-250 * time.Millisecond),
-		EndTime:   time.Now().Add(-200 * time.Millisecond),
-	}
-
-	dbTraceData := TraceData{
-		TraceID:      rootTraceID,
-		SpanID:       dbSpanID,
-		ParentSpanID: rootSpanID,
-		Name:         "database_operation",
-		Attributes: map[string]interface{}{
-			"db.system":    "postgresql",
-			"db.name":      "orders_db",
-			"db.operation": "insert",
-		},
-		StartTime: time.Now().Add(-200 * time.Millisecond),
-		EndTime:   time.Now().Add(-100 * time.Millisecond),
-	}
-
-	serviceTraceData := TraceData{
-		TraceID:      rootTraceID,
-		SpanID:       serviceSpanID,
-		ParentSpanID: rootSpanID,
-		Name:         "external_service_call",
-		Attributes: map[string]interface{}{
-			"service.name":      "payment-service",
-			"service.operation": "process_payment",
-			"service.version":   "1.0.0",
-		},
-		Events: []EventData{
-			{
-				Name: "payment_processing_started",
-				Attributes: map[string]interface{}{
-					"payment.id":     "pay-123",
-					"payment.amount": 99.99,
-					"currency":       "EUR",
-				},
-				Time: time.Now().Add(-150 * time.Millisecond),
-			},
-			{
-				Name: "payment_processing_completed",
-				Attributes: map[string]interface{}{
-					"payment.status": "success",
-					"transaction.id": "tx-456",
-				},
-				Time: time.Now(),
-			},
-		},
-		StartTime: time.Now().Add(-150 * time.Millisecond),
-		EndTime:   time.Now(),
-	}
-
-	// Serialize and send all trace data
-	traceDataList := []TraceData{rootTraceData, authTraceData, dbTraceData, serviceTraceData}
-
-	for _, traceData := range traceDataList {
-		data, err := json.Marshal(traceData)
-		if err != nil {
-			return fmt.Errorf("failed to marshal trace data: %v", err)
-		}
-
-		// Debug output
-		fmt.Printf("Sending trace: %s\n", string(data))
-
-		messageBuilder := messagingService.MessageBuilder()
-		msg, err := messageBuilder.BuildWithByteArrayPayload(data)
-		if err != nil {
-			return fmt.Errorf("failed to build message: %v", err)
-		}
-
-		// Create direct message publisher
-		publisher, err := messagingService.CreateDirectMessagePublisherBuilder().Build()
-		if err != nil {
-			return fmt.Errorf("failed to create publisher: %v", err)
-		}
-
-		// Start the publisher
-		if err := publisher.Start(); err != nil {
-			return fmt.Errorf("failed to start publisher: %v", err)
-		}
-		defer publisher.Terminate(1 * time.Second)
-
-		// Publish the message
-		if err := publisher.Publish(msg, solaceresource.TopicOf(topic)); err != nil {
-			return fmt.Errorf("failed to publish message: %v", err)
+	// Force flush to ensure all spans are exported
+	if tp, ok := otel.GetTracerProvider().(*sdktrace.TracerProvider); ok {
+		if err := tp.ForceFlush(ctx); err != nil {
+			return fmt.Errorf("failed to flush traces: %v", err)
 		}
 	}
 
 	return nil
 }
 
-func initTracer() error {
-	tp := sdktrace.NewTracerProvider()
+func initTracer(messagingService solace.MessagingService) error {
+	// Get topic from environment
+	topic := os.Getenv("SOLACE_TOPIC")
+	if topic == "" {
+		topic = "default/topic"
+	}
+
+	// Create Solace exporter
+	exporter := newSolaceExporter(messagingService, topic)
+
+	// Create resource with service information
+	res, err := resource.New(
+		context.Background(),
+		resource.WithAttributes(
+			semconv.ServiceNameKey.String("test-otlp-sender"),
+			semconv.ServiceVersionKey.String("1.0.0"),
+		),
+	)
+	if err != nil {
+		return fmt.Errorf("failed to create resource: %v", err)
+	}
+
+	// Create trace provider
+	tp := sdktrace.NewTracerProvider(
+		sdktrace.WithSampler(sdktrace.AlwaysSample()),
+		sdktrace.WithBatcher(exporter),
+		sdktrace.WithResource(res),
+	)
 	otel.SetTracerProvider(tp)
+
 	return nil
 }
 
 func main() {
-	// Initialize tracer
-	if err := initTracer(); err != nil {
-		log.Fatalf("Failed to initialize tracer: %v", err)
-	}
-
-	// Initialize Solace messaging service
+	// Initialize Solace messaging
 	messagingService, err := initSolaceMessaging()
 	if err != nil {
 		log.Fatalf("Failed to initialize Solace messaging: %v", err)
 	}
 	defer messagingService.Disconnect()
 
-	// Create context
-	ctx := context.Background()
-
-	// Generate test data
-	log.Println("Starting test OTLP sender …")
-	if err := generateTestData(ctx, messagingService); err != nil {
-		log.Fatalf("Error generating test data: %v", err)
+	// Initialize tracer
+	if err := initTracer(messagingService); err != nil {
+		log.Fatalf("Failed to initialize tracer: %v", err)
 	}
-	log.Println("Test data successfully generated and sent.")
+
+	// Generate and send test data
+	ctx := context.Background()
+	if err := generateTestData(ctx, messagingService); err != nil {
+		log.Fatalf("Failed to generate test data: %v", err)
+	}
+
+	log.Println("Test data sent successfully")
 }

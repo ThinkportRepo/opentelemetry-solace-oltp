@@ -2,13 +2,18 @@ package solaceotlpreceiver
 
 import (
 	"context"
+	"encoding/hex"
+	"encoding/json"
 	"fmt"
+	"math/rand"
 	"os"
 	"sync"
 	"time"
 
 	"go.opentelemetry.io/collector/component"
 	"go.opentelemetry.io/collector/consumer"
+	"go.opentelemetry.io/collector/pdata/pcommon"
+	"go.opentelemetry.io/collector/pdata/ptrace"
 	"go.opentelemetry.io/collector/pdata/ptrace/ptraceotlp"
 	"go.uber.org/zap"
 	"solace.dev/go/messaging"
@@ -39,13 +44,14 @@ func NewTracesReceiver(
 	consumer consumer.Traces,
 	opts ...interface{},
 ) (*TracesReceiver, error) {
+	randNum := rand.Intn(1000000)
 	receiver := &TracesReceiver{
 		consumer: consumer,
 		settings: settings,
 		config:   config,
 		logger:   settings.TelemetrySettings.Logger,
 	}
-	receiver.logger.Info("NewTracesReceiver instance created", zap.Time("created_at", time.Now()), zap.String("queue", config.Queue))
+	receiver.logger.Info("[TEST] NewTracesReceiver instance created - Build-Check!", zap.Time("created_at", time.Now()), zap.String("queue", config.Queue), zap.Int("rand", randNum))
 	if len(opts) > 0 {
 		receiver.messagingService = opts[0]
 	}
@@ -83,8 +89,6 @@ func (r *TracesReceiver) Start(ctx context.Context, host component.Host) error {
 
 	r.logger.Info("MessagingService instance type", zap.String("type", fmt.Sprintf("%T", r.messagingService)))
 
-	r.logger.Info("Initializing QueueConsumer...")
-
 	var err error
 	type queueConsumerBuilderIface interface {
 		WithMessageAutoAcknowledgement() queueConsumerBuilderIface
@@ -107,7 +111,7 @@ func (r *TracesReceiver) Start(ctx context.Context, host component.Host) error {
 		if !ok {
 			return fmt.Errorf("queue consumer builder does not implement required interface")
 		}
-		r.logger.Info("Building QueueConsumer...")
+		r.logger.Info("Building QueueConsumer …")
 		queueConsumer, err := builder.
 			WithMessageAutoAcknowledgement().
 			WithMessageListener(r.HandleMessage).
@@ -116,9 +120,10 @@ func (r *TracesReceiver) Start(ctx context.Context, host component.Host) error {
 		if err != nil {
 			return fmt.Errorf("failed to create queue consumer: %w", err)
 		}
+		r.logger.Info("[TEST] MessageListener registered!")
 		r.QueueConsumer = queueConsumer
 		r.logger.Info("QueueConsumer instance created", zap.Time("created_at", time.Now()), zap.String("queue", r.config.Queue))
-		r.logger.Info("Starting QueueConsumer...")
+		r.logger.Info("Starting QueueConsumer …")
 		err = queueConsumer.Start()
 		if err != nil {
 			return fmt.Errorf("failed to start queue consumer: %w", err)
@@ -157,19 +162,20 @@ func (r *TracesReceiver) Start(ctx context.Context, host component.Host) error {
 		if err != nil {
 			return fmt.Errorf("failed to build persistent message receiver (SDK): %w", err)
 		}
-		r.QueueConsumer = receiver
-		r.logger.Info("Starting persistent message receiver (SDK)...")
 		err = receiver.Start()
 		if err != nil {
 			return fmt.Errorf("failed to start persistent message receiver (SDK): %w", err)
 		}
+		if regErr := receiver.ReceiveAsync(r.HandleMessage); regErr != nil {
+			return fmt.Errorf("failed to register message handler: %w", regErr)
+		}
+		r.QueueConsumer = receiver
 	default:
 		r.logger.Error("Unknown MessagingService type!", zap.Any("type", ms))
 		return fmt.Errorf("unsupported messagingService type")
 	}
 
 	r.logger.Info("Solace OTLP traces receiver started successfully!")
-
 	return nil
 }
 
@@ -193,37 +199,95 @@ func (r *TracesReceiver) Shutdown(ctx context.Context) error {
 
 // HandleMessage processes an incoming message
 func (r *TracesReceiver) HandleMessage(msg message.InboundMessage) {
-	r.logger.Info("HandleMessage called - new message received!")
+	r.logger.Debug("[TEST] HandleMessage called!")
+
 	r.wg.Add(1)
 	defer r.wg.Done()
 
-	payload, ok := msg.GetPayloadAsBytes()
+	payload, ok := msg.GetPayloadAsString()
+	r.logger.Debug("[TEST] Payload received", zap.Bool("ok", ok))
 	if !ok {
 		r.logger.Error("Failed to get message payload")
-		msg.Dispose()
 		return
 	}
 
-	r.logger.Info("Message received, attempting to deserialize...", zap.Int("payload_len", len(payload)))
+	r.logger.Debug("[TEST] Payload length", zap.Int("len", len(payload)))
 
+	// Parse JSON payload
+	var traceData struct {
+		TraceID      string `json:"trace_id"`
+		SpanID       string `json:"span_id"`
+		ParentSpanID string `json:"parent_span_id"`
+		Name         string `json:"name"`
+		Kind         int    `json:"kind"`
+		StartTime    int64  `json:"start_time"`
+		EndTime      int64  `json:"end_time"`
+		Status       struct {
+			Code    int    `json:"code"`
+			Message string `json:"message"`
+		} `json:"status"`
+	}
+
+	if err := json.Unmarshal([]byte(payload), &traceData); err != nil {
+		r.logger.Error("Failed to unmarshal trace data", zap.Error(err))
+		return
+	}
+
+	// Create OTLP trace
 	otlpTraces := ptraceotlp.NewExportRequest()
-	if err := otlpTraces.UnmarshalProto(payload); err != nil {
-		r.logger.Error("Failed to unmarshal traces", zap.Error(err))
-		msg.Dispose()
+	traces := otlpTraces.Traces()
+	resourceSpans := traces.ResourceSpans().AppendEmpty()
+	scopeSpans := resourceSpans.ScopeSpans().AppendEmpty()
+	span := scopeSpans.Spans().AppendEmpty()
+
+	// Convert IDs
+	traceID, err := hexStringToTraceID(traceData.TraceID)
+	if err != nil {
+		r.logger.Error("Failed to convert trace ID", zap.Error(err))
+		return
+	}
+	spanID, err := hexStringToSpanID(traceData.SpanID)
+	if err != nil {
+		r.logger.Error("Failed to convert span ID", zap.Error(err))
+		return
+	}
+	parentSpanID, err := hexStringToSpanID(traceData.ParentSpanID)
+	if err != nil {
+		r.logger.Error("Failed to convert parent span ID", zap.Error(err))
 		return
 	}
 
-	r.logger.Info("Trace successfully deserialized, forwarding to consumer...")
+	// Set span data
+	span.SetTraceID(traceID)
+	span.SetSpanID(spanID)
+	span.SetParentSpanID(parentSpanID)
+	span.SetName(traceData.Name)
+	span.SetKind(ptrace.SpanKind(traceData.Kind))
+	span.SetStartTimestamp(pcommon.Timestamp(traceData.StartTime))
+	span.SetEndTimestamp(pcommon.Timestamp(traceData.EndTime))
+	span.Status().SetCode(ptrace.StatusCode(traceData.Status.Code))
+	span.Status().SetMessage(traceData.Status.Message)
 
-	if err := r.consumer.ConsumeTraces(context.Background(), otlpTraces.Traces()); err != nil {
+	r.logger.Debug("[TEST] Trace successfully deserialized, forwarding to consumer...")
+	if err := r.consumer.ConsumeTraces(context.Background(), traces); err != nil {
 		r.logger.Error("Failed to consume traces", zap.Error(err))
-		msg.Dispose()
 		return
 	}
+	r.logger.Info("[TEST] MessageListener registered!")
+}
 
-	// Nach erfolgreicher Verarbeitung die Nachricht bestätigen
-	msg.Dispose()
-	r.logger.Info("Message successfully acknowledged!")
+// hexStringToTraceID converts a hex string to a TraceID
+func hexStringToTraceID(s string) (pcommon.TraceID, error) {
+	var traceID pcommon.TraceID
+	_, err := hex.Decode(traceID[:], []byte(s))
+	return traceID, err
+}
+
+// hexStringToSpanID converts a hex string to a SpanID
+func hexStringToSpanID(s string) (pcommon.SpanID, error) {
+	var spanID pcommon.SpanID
+	_, err := hex.Decode(spanID[:], []byte(s))
+	return spanID, err
 }
 
 // GetVPN returns the VPN configuration
