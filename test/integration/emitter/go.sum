@@ -1,4 +1,4 @@
 github.com/joho/godotenv v1.5.1 h1:7eLL/+HRGLY0ldzfGMeQkb7vMd0as4CfYvUVzLqw0N0=
 github.com/joho/godotenv v1.5.1/go.mod h1:f4LDr5Voq0i2e/R5DDNOoa2zzDfwtkZa6DnEwAbqwq4=
-solace.dev/go/messaging v1.3.0 h1:khtmLYrq+9yXNnZyH1LsYd4BCM3Vco+dwHcXkDcs+iQ=
-solace.dev/go/messaging v1.3.0/go.mod h1:QKqAKqxKX5v0G9PEuRpe9wBNbEuj/ncbrkqsNArT7L0=
+solace.dev/go/messaging v1.10.0 h1:6fYG0SF4ILXmXA32thnbNRy87w76+CjQhTp16EP3U/Q=
+solace.dev/go/messaging v1.10.0/go.mod h1:QKqAKqxKX5v0G9PEuRpe9wBNbEuj/ncbrkqsNArT7L0=

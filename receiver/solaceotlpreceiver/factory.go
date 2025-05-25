@@ -19,7 +19,7 @@ func NewFactory() receiver.Factory {
 		typeStr,
 		createDefaultConfig,
 		receiver.WithTraces(createTracesReceiver, component.StabilityLevelStable),
-		receiver.WithLogs(createLogsReceiver, component.StabilityLevelStable),
+		receiver.WithLogs(createLogsReceiver, component.StabilityLevelAlpha),
 	)
 }
 

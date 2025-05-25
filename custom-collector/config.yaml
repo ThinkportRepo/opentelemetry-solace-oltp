@@ -14,4 +14,8 @@ service:
   pipelines:
     traces:
       receivers: [solaceotlp]
-      exporters: [debug] 
+      exporters: [debug]
+    # Logs-Pipeline ist deaktiviert, da nicht benötigt
+    # logs:
+    #   receivers: [solaceotlp]
+    #   exporters: [debug] 

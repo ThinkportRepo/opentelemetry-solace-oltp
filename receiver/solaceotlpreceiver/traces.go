@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"sync"
+	"time"
 
 	"go.opentelemetry.io/collector/component"
 	"go.opentelemetry.io/collector/consumer"
@@ -44,6 +45,7 @@ func NewTracesReceiver(
 		config:   config,
 		logger:   settings.TelemetrySettings.Logger,
 	}
+	receiver.logger.Info("NewTracesReceiver instance created", zap.Time("created_at", time.Now()), zap.String("queue", config.Queue))
 	if len(opts) > 0 {
 		receiver.messagingService = opts[0]
 	}
@@ -52,6 +54,8 @@ func NewTracesReceiver(
 
 // Start starts the receiver
 func (r *TracesReceiver) Start(ctx context.Context, host component.Host) error {
+	r.logger.Info("Start() called for TracesReceiver", zap.Time("start_time", time.Now()), zap.String("queue", r.config.Queue))
+
 	r.logger.Info("Starting Solace OTLP traces receiver",
 		zap.String("endpoint", r.config.Endpoint),
 		zap.String("queue", r.config.Queue))
@@ -76,6 +80,8 @@ func (r *TracesReceiver) Start(ctx context.Context, host component.Host) error {
 		}
 		r.messagingService = ms
 	}
+
+	r.logger.Info("MessagingService instance type", zap.String("type", fmt.Sprintf("%T", r.messagingService)))
 
 	r.logger.Info("Initializing QueueConsumer...")
 
@@ -109,11 +115,13 @@ func (r *TracesReceiver) Start(ctx context.Context, host component.Host) error {
 			return fmt.Errorf("failed to create queue consumer: %w", err)
 		}
 		r.QueueConsumer = queueConsumer
+		r.logger.Info("QueueConsumer instance created", zap.Time("created_at", time.Now()), zap.String("queue", r.config.Queue))
 		r.logger.Info("Starting QueueConsumer...")
 		err = queueConsumer.Start()
 		if err != nil {
 			return fmt.Errorf("failed to start queue consumer: %w", err)
 		}
+		r.logger.Info("QueueConsumer started", zap.Time("started_at", time.Now()), zap.String("queue", r.config.Queue))
 	case mocks.MessagingService:
 		r.logger.Info("Using Mock MessagingService")
 		err = ms.Connect()
@@ -164,6 +172,7 @@ func (r *TracesReceiver) Start(ctx context.Context, host component.Host) error {
 
 // Shutdown stops the receiver
 func (r *TracesReceiver) Shutdown(ctx context.Context) error {
+	r.logger.Info("Shutdown() called for TracesReceiver", zap.Time("shutdown_time", time.Now()), zap.String("queue", r.config.Queue))
 	r.logger.Info("Shutting down Solace OTLP traces receiver")
 	// Hier ggf. weitere Aufräumarbeiten, z.B. Disconnect
 	if r.QueueConsumer != nil {

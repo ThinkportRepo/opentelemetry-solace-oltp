@@ -5,6 +5,46 @@ receivers:
         endpoint: 0.0.0.0:4317
       http:
         endpoint: 0.0.0.0:4318
+  hostmetrics:
+    collection_interval: 42s
+    scrapers:
+      cpu: {}
+      memory: {}
+      disk: {}
+      filesystem: {}
+      load: {}
+      network: {}
+      paging: {}
+      processes: {}
+  httpcheck:
+    collection_interval: 144s
+    initial_delay: 12s
+    targets:
+      - method: "GET"
+        endpoints:
+          - "https://opentelemetry.io"
+      - method: "GET"
+        endpoints:
+          - "https://example.com"
+          - "https://heise.de"
+  filelog:
+    include:
+      - /var/log/DiagnosticMessages/*
+      - /var/lib/docker/containers/*/*.log
+    start_at: beginning
+    include_file_path: true
+    include_file_name: true
+    resource:
+      service.name: docker-logs
+    operators:
+      - type: json_parser
+        parse_from: body
+      - type: move
+        from: attributes.container_name
+        to: resource.container.name
+      - type: move
+        from: attributes.container_id
+        to: resource.container.id
   solaceotlp:
     endpoint: ${SOLACE_ENDPOINT}
     queue: ${SOLACE_QUEUE}
@@ -46,6 +86,18 @@ exporters:
       site: ${DD_SITE}
     host_metadata:
       enabled: true
+    metrics:
+      endpoint: https://api.${DD_SITE}
+      resource_attributes_as_tags: true
+    traces:
+      endpoint: https://trace.agent.${DD_SITE}
+      trace_buffer: 10000
+      span_name_remappings:
+        service.name: service
+    logs:
+      endpoint: https://http-intake.logs.${DD_SITE}
+      use_compression: true
+      compression_level: 6
 
 service:
   telemetry:
@@ -55,17 +107,16 @@ service:
         component: otelcol
     metrics:
       level: detailed
-
   pipelines:
     traces:
       receivers: [otlp, solaceotlp]
       processors: [memory_limiter, resource, batch]
       exporters: [debug, datadog]
     metrics:
-      receivers: [otlp]
+      receivers: [otlp, hostmetrics, httpcheck]
       processors: [memory_limiter, resource, batch]
       exporters: [debug, datadog]
     logs:
-      receivers: [otlp, solaceotlp]
+      receivers: [otlp, filelog, solaceotlp]
       processors: [memory_limiter, resource, batch]
       exporters: [debug, datadog]
