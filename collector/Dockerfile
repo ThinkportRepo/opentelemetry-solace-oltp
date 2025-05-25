@@ -5,12 +5,12 @@ ARG OCB_VERSION=v0.126.0
 
 # Install build dependencies
 RUN apk add --no-cache make git curl wget unzip build-base
+COPY third_party/solace-pubsubplus-c-api-*-linux_x86_64.tar.gz /tmp/solace-c.tar.gz
 
 # Install Solace C API (solclient)
-RUN wget -q https://products.solace.com/download/SDKPERF_C_LINUX64 -O /tmp/solace-c.zip \
-    && mkdir -p /opt/solace \
-    && unzip -q /tmp/solace-c.zip -d /opt/solace \
-    && rm /tmp/solace-c.zip \
+RUN mkdir -p /opt/solace \
+    && tar -xzf /tmp/solace-c.tar.gz -C /opt/solace \
+    && rm /tmp/solace-c.tar.gz \
     && cp /opt/solace/solclient*/lib/* /usr/lib/ \
     && cp /opt/solace/solclient*/lib/* /usr/local/lib/ \
     && cp /opt/solace/solclient*/include/* /usr/include/
