@@ -3,7 +3,7 @@ description: Test, Build and Push Docker image to GitHub Container Registry
 
 on:
   release:
-    types: [published]
+    types: [released]
 
 jobs:
   test:
