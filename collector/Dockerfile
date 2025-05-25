@@ -4,7 +4,19 @@ FROM golang:1.24.2-alpine AS builder
 ARG OCB_VERSION=v0.126.0
 
 # Install build dependencies
-RUN apk add --no-cache make git curl
+RUN apk add --no-cache make git curl wget unzip build-base
+
+# Install Solace C API (solclient)
+RUN wget -q https://products.solace.com/download/SDKPERF_C_LINUX64 -O /tmp/solace-c.zip \
+    && mkdir -p /opt/solace \
+    && unzip -q /tmp/solace-c.zip -d /opt/solace \
+    && rm /tmp/solace-c.zip \
+    && cp /opt/solace/solclient*/lib/* /usr/lib/ \
+    && cp /opt/solace/solclient*/lib/* /usr/local/lib/ \
+    && cp /opt/solace/solclient*/include/* /usr/include/
+
+ENV CGO_ENABLED=1
+ENV LD_LIBRARY_PATH=/usr/lib:/usr/local/lib
 
 # Download OCB binary for Linux
 RUN curl --proto '=https' --tlsv1.2 -fL -o /usr/local/bin/ocb \
