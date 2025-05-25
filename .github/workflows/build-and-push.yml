@@ -62,6 +62,11 @@ jobs:
             type=raw,value=${{ steps.get_tag.outputs.tag }}
             type=raw,value=latest
 
+      - name: Run unit tests
+        run: |
+          cd receiver/solaceotlpreceiver
+          go test -v -coverprofile=coverage.out ./internal/receiver
+
       - name: Build and push Docker image (multiarch)
         uses: docker/build-push-action@v5
         with:

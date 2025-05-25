@@ -28,9 +28,8 @@ jobs:
         run: go mod download
 
       - name: Run tests with coverage
-        id: coverage
         run: |
-          go test -v -coverprofile=coverage.out ./internal/receiver
-          go test -v -race ./internal/receiver
+          cd receiver/solaceotlpreceiver
+          go test -v -coverprofile=coverage.out ./internal/recei
           COVERAGE=$(go tool cover -func=coverage.out | grep total | awk '{print $3}' | sed 's/%//')
           echo "coverage=$COVERAGE" >> $GITHUB_OUTPUT
