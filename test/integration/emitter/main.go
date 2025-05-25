@@ -37,28 +37,6 @@ type EventData struct {
 	Time       time.Time              `json:"time"`
 }
 
-func loadTruststorePEMs(truststoreDir string) ([]byte, error) {
-	var combinedPEM []byte
-	files, err := os.ReadDir(truststoreDir)
-	if err != nil {
-		return nil, fmt.Errorf("failed to read truststore directory: %v", err)
-	}
-	for _, file := range files {
-		if !file.IsDir() && filepath.Ext(file.Name()) == ".pem" {
-			pemPath := filepath.Join(truststoreDir, file.Name())
-			pemData, err := os.ReadFile(pemPath)
-			if err != nil {
-				return nil, fmt.Errorf("failed to read PEM file %s: %v", pemPath, err)
-			}
-			combinedPEM = append(combinedPEM, pemData...)
-		}
-	}
-	if len(combinedPEM) == 0 {
-		return nil, fmt.Errorf("no PEM files found in truststore directory")
-	}
-	return combinedPEM, nil
-}
-
 func initSolaceMessaging() (solace.MessagingService, error) {
 	// Load environment variables
 	if err := godotenv.Load(); err != nil {
@@ -158,7 +136,7 @@ func generateTestData(ctx context.Context, messagingService solace.MessagingServ
 	dbSpan.End()
 
 	// Simulate external service call
-	ctx, serviceSpan := tracer.Start(ctx, "external_service_call")
+	_, serviceSpan := tracer.Start(ctx, "external_service_call")
 	serviceSpanContext := serviceSpan.SpanContext()
 	serviceSpanID := serviceSpanContext.SpanID().String()
 	serviceSpan.SetAttributes(
