@@ -29,23 +29,23 @@ graph LR
     style Datadog fill:#bfb,stroke:#333,stroke-width:2px
 ```
 
-## Beschreibung des Datenflusses
+## Description of the data flow
 
 1. **Solace Message Broker**
-   - Empfängt Telemetriedaten von verschiedenen Quellen
-   - Sendet Daten an den Custom Collector
+   - Receives telemetry data from various sources
+   - Sends data to the Custom Collector
 
 2. **Custom Collector**
-   - **Solace Receiver**: Empfängt Daten vom Solace Message Broker
-   - **Pipeline**: Verarbeitet die empfangenen Daten
-   - **Datadog Exporter**: Exportiert die verarbeiteten Daten an Datadog
+   - **Solace Receiver**: Receives data from the Solace Message Broker
+   - **Pipeline**: Processes the received data
+   - **Datadog Exporter**: Exports the processed data to Datadog
 
 3. **Datadog Platform**
-   - Empfängt und verarbeitet drei Arten von Daten:
-     - Metrics (Metriken)
-     - Traces (Spuren)
-     - Logs (Protokolle)
+   - Receives and processes three types of data:
+     - Metrics (Metrics)
+     - Traces (Traces)
+     - Logs (Logs)
 
-Die Konfiguration erfolgt über:
-- `.env` Datei für Datadog-spezifische Einstellungen
-- `collector-config.yaml` für die OpenTelemetry Collector Konfiguration 
+The configuration is done via:
+- `.env` file for Datadog-specific settings
+- `collector-config.yaml` for the OpenTelemetry Collector configuration 

@@ -1,12 +1,12 @@
 # OpenTelemetry Solace OTLP
 
-This project is a custom OpenTelemetry Collector with a receiver for Solace witl OTLP data. 
-It support logs and traces.
+This project is a custom OpenTelemetry Collector with a receiver for Solace with OTLP data. 
+It supports logs and traces.
 
 ## Content
 
 1. [Opentelemetry Solace Receiver](./receiver/solaceotlpreceiver/README.md)
-2. [Build your custom OpenTelemetry Collector wird the solace recveiver](./custom-collector/README.md)
+2. [Build your custom OpenTelemetry Collector with the solace receiver](./custom-collector/README.md)
 
 ## Contributing
 

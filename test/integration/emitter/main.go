@@ -10,9 +10,12 @@ import (
 	"path/filepath"
 	"time"
 
-	common_v1 "github.com/ThinkportRepo/opentelemetry-solace-otlp/opentelemetry/proto/proto/common/v1"
-	logs_v1 "github.com/ThinkportRepo/opentelemetry-solace-otlp/opentelemetry/proto/proto/logs/v1"
-	resource_v1 "github.com/ThinkportRepo/opentelemetry-solace-otlp/opentelemetry/proto/proto/resource/v1"
+	collector_logs_v1 "go.opentelemetry.io/proto/otlp/collector/logs/v1"
+	collector_trace_v1 "go.opentelemetry.io/proto/otlp/collector/trace/v1"
+	common_v1 "go.opentelemetry.io/proto/otlp/common/v1"
+	logs_v1 "go.opentelemetry.io/proto/otlp/logs/v1"
+	resource_v1 "go.opentelemetry.io/proto/otlp/resource/v1"
+	trace_v1 "go.opentelemetry.io/proto/otlp/trace/v1"
 
 	"github.com/joho/godotenv"
 	"go.opentelemetry.io/otel"
@@ -42,20 +45,61 @@ func newSolaceExporter(messagingService solace.MessagingService, topic string) *
 
 func (e *solaceExporter) ExportSpans(ctx context.Context, spans []sdktrace.ReadOnlySpan) error {
 	for _, span := range spans {
-		// Create message with span data
+		// Convert IDs to bytes
+		traceIDBytes, _ := hex.DecodeString(span.SpanContext().TraceID().String())
+		spanIDBytes, _ := hex.DecodeString(span.SpanContext().SpanID().String())
+		parentSpanIDBytes, _ := hex.DecodeString(span.Parent().SpanID().String())
+
+		// Create trace record
+		traceRecord := &trace_v1.Span{
+			TraceId:           traceIDBytes,
+			SpanId:            spanIDBytes,
+			ParentSpanId:      parentSpanIDBytes,
+			Name:              span.Name(),
+			Kind:              trace_v1.Span_SpanKind(span.SpanKind()),
+			StartTimeUnixNano: uint64(span.StartTime().UnixNano()),
+			EndTimeUnixNano:   uint64(span.EndTime().UnixNano()),
+			Status: &trace_v1.Status{
+				Code:    trace_v1.Status_StatusCode(span.Status().Code),
+				Message: span.Status().Description,
+			},
+		}
+
+		// Add attributes
+		for _, attr := range span.Attributes() {
+			traceRecord.Attributes = append(traceRecord.Attributes, &common_v1.KeyValue{
+				Key:   string(attr.Key),
+				Value: &common_v1.AnyValue{Value: &common_v1.AnyValue_StringValue{StringValue: attr.Value.AsString()}},
+			})
+		}
+
+		// Create export request
+		exportRequest := &collector_trace_v1.ExportTraceServiceRequest{
+			ResourceSpans: []*trace_v1.ResourceSpans{
+				{
+					Resource: &resource_v1.Resource{
+						Attributes: []*common_v1.KeyValue{
+							{Key: "service.name", Value: &common_v1.AnyValue{Value: &common_v1.AnyValue_StringValue{StringValue: "test-otlp-sender"}}},
+						},
+					},
+					ScopeSpans: []*trace_v1.ScopeSpans{
+						{
+							Spans: []*trace_v1.Span{traceRecord},
+						},
+					},
+				},
+			},
+		}
+
+		// Marshal to protobuf
+		data, err := proto.Marshal(exportRequest)
+		if err != nil {
+			return fmt.Errorf("failed to marshal OTLP trace: %v", err)
+		}
+
+		// Create message with base64 encoded protobuf
 		messageBuilder := e.messagingService.MessageBuilder()
-		msg, err := messageBuilder.BuildWithStringPayload(fmt.Sprintf(
-			`{"trace_id":"%s","span_id":"%s","parent_span_id":"%s","name":"%s","kind":%d,"start_time":%d,"end_time":%d,"status":{"code":%d,"message":"%s"}}`,
-			span.SpanContext().TraceID().String(),
-			span.SpanContext().SpanID().String(),
-			span.Parent().SpanID().String(),
-			span.Name(),
-			span.SpanKind(),
-			span.StartTime().UnixNano(),
-			span.EndTime().UnixNano(),
-			span.Status().Code,
-			span.Status().Description,
-		))
+		msg, err := messageBuilder.BuildWithStringPayload(base64.StdEncoding.EncodeToString(data))
 		if err != nil {
 			return fmt.Errorf("failed to build message: %v", err)
 		}
@@ -132,7 +176,7 @@ func initSolaceMessaging() (solace.MessagingService, error) {
 	return messagingService, nil
 }
 
-// SeverityNumber repräsentiert die OTLP Log Severity Levels
+// SeverityNumber represents the OTLP Log Severity Levels
 type SeverityNumber int32
 
 const (
@@ -145,13 +189,13 @@ const (
 	SEVERITY_NUMBER_FATAL       SeverityNumber = 21
 )
 
-// KeyValue repräsentiert ein OTLP KeyValue Attribut
+// KeyValue represents an OTLP KeyValue attribute
 type KeyValue struct {
 	Key   string      `json:"key"`
 	Value interface{} `json:"value"`
 }
 
-// LogRecord repräsentiert einen OTLP Log Record
+// LogRecord represents an OTLP Log Record
 type LogRecord struct {
 	TimeUnixNano         int64      `json:"time_unix_nano"`
 	ObservedTimeUnixNano int64      `json:"observed_time_unix_nano"`
@@ -209,7 +253,7 @@ func sendLogMessage(messagingService solace.MessagingService, topic string, trac
 		Attributes:     keyValues,
 	}
 
-	exportRequest := &logs_v1.ExportLogsServiceRequest{
+	exportRequest := &collector_logs_v1.ExportLogsServiceRequest{
 		ResourceLogs: []*logs_v1.ResourceLogs{
 			{
 				Resource: &resource_v1.Resource{
@@ -275,7 +319,7 @@ func generateTestData(ctx context.Context, messagingService solace.MessagingServ
 		attribute.String("solace.topic", topic),
 	)
 
-	// Send log message for root span
+	// Send log message for root span using the current span's context
 	if err := sendLogMessage(
 		messagingService,
 		topic,
@@ -298,7 +342,7 @@ func generateTestData(ctx context.Context, messagingService solace.MessagingServ
 		attribute.String("auth.user_id", "user-789"),
 	)
 
-	// Send error log for authentication
+	// Send error log for authentication using the current span's context
 	if err := sendLogMessage(
 		messagingService,
 		topic,
@@ -329,7 +373,7 @@ func generateTestData(ctx context.Context, messagingService solace.MessagingServ
 	dbSpan.End()
 
 	// Simulate external service call
-	_, serviceSpan := tracer.Start(ctx, "external_service_call")
+	ctx, serviceSpan := tracer.Start(ctx, "external_service_call")
 	serviceSpan.SetAttributes(
 		attribute.String("service.name", "payment-service"),
 		attribute.String("service.operation", "process_payment"),
