@@ -3,6 +3,7 @@
 This example shows how to send logs to a Solace broker using Go, so they can be received by the opentelemetry-receiver-solace.
 
 ## Prerequisites
+
 - Go installed
 - Access to a Solace broker
 - A configured opentelemetry-receiver-solace
@@ -17,4 +18,4 @@ This example shows how to send logs to a Solace broker using Go, so they can be 
 go run main.go
 ```
 
-The code is based on the pattern from `test/integration/emitter`. 
+The code is based on the pattern from `test/integration/emitter`.

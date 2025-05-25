@@ -9,6 +9,21 @@ This guide explains how to deploy the OpenTelemetry Collector with the Solace Re
 - Access to a Docker registry (for your custom collector image)
 - Datadog API key (if you want to export to Datadog)
 
+## Using .env.dist
+
+The `.env.dist` file in the project root contains example values for all required environment variables. You can use it as a template for local development or for setting up your environment:
+
+```bash
+cp ../../.env.dist .env
+```
+
+Then, adjust the values in your `.env` file to match your environment. The most important variables for the Solace receiver are:
+- `SOLACE_HOST`
+- `SOLACE_VPN`
+- `SOLACE_USERNAME`
+- `SOLACE_PASSWORD`
+- `SOLACE_TELEMETRY_QUEUE`
+
 ## Quick Start
 
 ### 1. Build and Push the Collector Image
