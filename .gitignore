@@ -4,5 +4,6 @@
 /vendor
 
 .env
+coverage.out
 
 /test/emitter
