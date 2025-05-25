@@ -65,7 +65,10 @@ jobs:
       - name: Build Docker image
         run: |
           TAG=$(echo "${{ steps.meta.outputs.tags }}" | head -n1)
-          docker build -f collector/Dockerfile -t "$TAG" .
+          docker buildx build \
+            --file collector/Dockerfile \
+            --tag "$TAG" \
+            .
 
       - name: Build and push Docker image
         uses: docker/build-push-action@v5
