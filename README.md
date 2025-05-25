@@ -6,7 +6,7 @@ It supports logs and traces.
 ## Content
 
 1. [Opentelemetry Solace Receiver](./receiver/solaceotlpreceiver/README.md)
-2. [Build your custom OpenTelemetry Collector with the solace receiver](./custom-collector/README.md)
+2. [Build your custom OpenTelemetry Collector with the solace receiver](./collector/README.md)
 
 ## Supported Message Formats
 

@@ -38,11 +38,13 @@ graph LR
 The project includes a `.env.dist` file as a template for configuration. To set up the environment variables:
 
 1. Copy the `.env.dist` file:
+
 ```bash
 cp .env.dist .env
 ```
 
 2. Edit the `.env` file and replace the placeholders with your values:
+
 ```bash
 # Datadog Configuration
 DD_API_KEY=your_datadog_api_key_here
@@ -66,8 +68,8 @@ receivers:
 exporters:
   datadog:
     api:
-      key: ${DD_API_KEY}  # Read from environment variable
-      site: ${DD_SITE}    # Read from environment variable
+      key: ${DD_API_KEY} # Read from environment variable
+      site: ${DD_SITE} # Read from environment variable
     host_metadata:
       enabled: true
     metrics:

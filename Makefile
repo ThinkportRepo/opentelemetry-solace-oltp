@@ -70,13 +70,13 @@ version-patch:
 # Build the OpenTelemetry Collector
 build:
 	@echo "${BLUE}Building OpenTelemetry Collector … ${NC}"
-	@ocb --config custom-collector/builder-config.yaml
+	@ocb --config collector/builder-config.yaml
 	@echo "${GREEN}Build completed${NC}"
 
 # Start the OpenTelemetry Collector
 start:
 	@echo "${BLUE}Starting OpenTelemetry Collector … ${NC}"
-	@SOLACE_TRUST_STORE_PATH=truststore SOLACE_HOST=$(SOLACE_HOST) SOLACE_QUEUE=$(SOLACE_QUEUE) SOLACE_USERNAME=$(SOLACE_USERNAME) SOLACE_PASSWORD=$(SOLACE_PASSWORD) SOLACE_VPN=$(SOLACE_VPN) DD_SITE=$(DD_SITE) DD_API_KEY=$(DD_API_KEY) ./otelcol-dev/otelcol-dev --config custom-collector/collector-config.yaml
+	@SOLACE_TRUST_STORE_PATH=truststore SOLACE_HOST=$(SOLACE_HOST) SOLACE_QUEUE=$(SOLACE_QUEUE) SOLACE_USERNAME=$(SOLACE_USERNAME) SOLACE_PASSWORD=$(SOLACE_PASSWORD) SOLACE_VPN=$(SOLACE_VPN) DD_SITE=$(DD_SITE) DD_API_KEY=$(DD_API_KEY) ./otelcol-dev/otelcol-dev --config collector/collector-config.yaml
 
 # Build and start the OpenTelemetry Collector
 rebuild:
@@ -87,13 +87,13 @@ rebuild:
 # Build Docker image for Linux AMD64 (default)
 docker-build:
 	@echo "${BLUE}Building Docker image for Linux AMD64 … ${NC}"
-	@docker build -t ghcr.io/thinkportrepo/opentelemetry-receiver-solace:latest -f custom-collector/Dockerfile .
+	@docker build -t ghcr.io/thinkportrepo/opentelemetry-receiver-solace:latest -f collector/Dockerfile .
 	@echo "${GREEN}Docker build completed${NC}"
 
 # Build Docker image for Mac ARM64 (local development)
 docker-build-local:
 	@echo "${BLUE}Building Docker image for Mac ARM64 … ${NC}"
-	@docker build -t ghcr.io/thinkportrepo/opentelemetry-receiver-solace:local -f custom-collector/Dockerfile .
+	@docker build -t ghcr.io/thinkportrepo/opentelemetry-receiver-solace:local -f collector/Dockerfile .
 	@echo "${GREEN}Docker build completed${NC}"
 
 docker-push:
