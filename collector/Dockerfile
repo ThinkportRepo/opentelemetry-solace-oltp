@@ -1,5 +1,5 @@
 # Build stage
-FROM debian:bullseye-slim AS builder
+FROM golang:1.24.2 AS builder
 
 ARG OCB_VERSION=v0.126.0
 
@@ -14,12 +14,6 @@ RUN apt-get update && \
     unzip \
     ca-certificates && \
     rm -rf /var/lib/apt/lists/*
-
-# Install Go
-RUN wget -O /tmp/go.tar.gz https://go.dev/dl/go1.24.2.linux-amd64.tar.gz \
-    && tar -C /usr/local -xzf /tmp/go.tar.gz \
-    && rm /tmp/go.tar.gz
-ENV PATH="/usr/local/go/bin:${PATH}"
 
 # Download Solace C API (glibc)
 RUN wget -O /tmp/solace-c.tar.gz https://products.solace.com/download/C_API_LINUX64
