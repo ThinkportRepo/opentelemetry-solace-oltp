@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.3.5](https://github.com/ThinkportRepo/opentelemetry-solace-otlp/compare/v0.3.4...v0.3.5) (2025-05-25)
+
+
+### Bug Fixes
+
+* **action.yml:** specify bash shell for running unit tests to ensure compatibility across environments ([85b32c5](https://github.com/ThinkportRepo/opentelemetry-solace-otlp/commit/85b32c5bfe3e7c8f250c5cd92d3d2e4226e3055d))
+* trigger release ([34205d9](https://github.com/ThinkportRepo/opentelemetry-solace-otlp/commit/34205d91e7e8c26f4fdfabdcc9b787f9037acc1f))
+
 ## [0.3.4](https://github.com/ThinkportRepo/opentelemetry-solace-otlp/compare/v0.3.3...v0.3.4) (2025-05-25)
 
 
