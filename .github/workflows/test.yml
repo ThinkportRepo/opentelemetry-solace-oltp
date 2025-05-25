@@ -34,22 +34,3 @@ jobs:
           go test -v -race ./...
           COVERAGE=$(go tool cover -func=coverage.out | grep total | awk '{print $3}' | sed 's/%//')
           echo "coverage=$COVERAGE" >> $GITHUB_OUTPUT
-
-      - name: Generate Coverage Badge
-        run: |
-          COVERAGE=$(go tool cover -func=coverage.out | grep total | awk '{print $3}' | sed 's/%//')
-          COLOR="green"
-          if (( $(echo "$COVERAGE < 80" | bc -l) )); then
-            COLOR="red"
-          elif (( $(echo "$COVERAGE < 90" | bc -l) )); then
-            COLOR="yellow"
-          fi
-          echo "{\"schemaVersion\": 1, \"label\": \"coverage\", \"message\": \"$COVERAGE%\", \"color\": \"$COLOR\"}" > coverage.json
-
-      - name: Update Coverage Badge
-        run: |
-          git config --global user.name 'GitHub Actions'
-          git config --global user.email 'actions@github.com'
-          git add coverage.json
-          git commit -m "chore: Update coverage badge [skip ci]"
-          git push
