@@ -5,6 +5,7 @@ import (
 	"encoding/base64"
 	"encoding/json"
 
+	"github.com/ThinkportRepo/opentelemetry-solace-otlp/receiver/solaceotlpreceiver/internal/util"
 	"go.opentelemetry.io/collector/consumer"
 	"go.opentelemetry.io/collector/pdata/pcommon"
 	"go.opentelemetry.io/collector/pdata/plog"
@@ -91,13 +92,13 @@ func (r *LogsReceiver) HandleMessage(msg message.InboundMessage) {
 
 		// Set trace context if available
 		if logData.TraceID != "" {
-			traceID, err := hexStringToTraceID(logData.TraceID)
+			traceID, err := util.HexStringToTraceID(logData.TraceID)
 			if err == nil {
 				logRecord.SetTraceID(traceID)
 			}
 		}
 		if logData.SpanID != "" {
-			spanID, err := hexStringToSpanID(logData.SpanID)
+			spanID, err := util.HexStringToSpanID(logData.SpanID)
 			if err == nil {
 				logRecord.SetSpanID(spanID)
 			}

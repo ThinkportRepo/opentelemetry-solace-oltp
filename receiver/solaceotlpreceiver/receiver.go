@@ -26,6 +26,7 @@ import (
 	"solace.dev/go/messaging/pkg/solace/message"
 	"solace.dev/go/messaging/pkg/solace/resource"
 
+	solaceconfig "github.com/ThinkportRepo/opentelemetry-solace-otlp/receiver/solaceotlpreceiver/config"
 	"github.com/ThinkportRepo/opentelemetry-solace-otlp/receiver/solaceotlpreceiver/internal/mocks"
 )
 
@@ -34,7 +35,7 @@ type Receiver struct {
 	logsConsumer     consumer.Logs
 	tracesConsumer   consumer.Traces
 	settings         receiver.Settings
-	config           *Config
+	config           *solaceconfig.Config
 	logger           *zap.Logger
 	wg               sync.WaitGroup
 	messagingService interface{} // can be real SDK or mock
@@ -44,7 +45,7 @@ type Receiver struct {
 // NewReceiver creates a new Receiver for Logs and Traces
 func NewReceiver(
 	settings receiver.Settings,
-	config *Config,
+	config *solaceconfig.Config,
 	logsConsumer consumer.Logs,
 	tracesConsumer consumer.Traces,
 	opts ...interface{},
@@ -216,7 +217,9 @@ func (r *Receiver) HandleMessage(msg message.InboundMessage) {
 		if err := otlpLogs.UnmarshalProto(payload); err == nil {
 			if err := r.logsConsumer.ConsumeLogs(context.Background(), otlpLogs.Logs()); err != nil {
 				r.logger.Error("Failed to consume logs", zap.Error(err))
+				return
 			}
+			acknowledgeMessage(r, msg)
 			return
 		}
 
@@ -225,7 +228,9 @@ func (r *Receiver) HandleMessage(msg message.InboundMessage) {
 		if err := otlpTraces.UnmarshalProto(payload); err == nil {
 			if err := r.tracesConsumer.ConsumeTraces(context.Background(), otlpTraces.Traces()); err != nil {
 				r.logger.Error("Failed to consume traces", zap.Error(err))
+				return
 			}
+			acknowledgeMessage(r, msg)
 			return
 		}
 	}
@@ -291,7 +296,9 @@ func (r *Receiver) HandleMessage(msg message.InboundMessage) {
 
 		if err := r.logsConsumer.ConsumeLogs(context.Background(), logs); err != nil {
 			r.logger.Error("Failed to consume logs", zap.Error(err))
+			return
 		}
+		acknowledgeMessage(r, msg)
 		return
 	}
 
@@ -354,15 +361,7 @@ func (r *Receiver) HandleMessage(msg message.InboundMessage) {
 		r.logger.Error("Failed to consume traces", zap.Error(err))
 		return
 	}
-
-	// Acknowledge message if supported
-	if receiver, ok := r.QueueConsumer.(interface {
-		Ack(message.InboundMessage) error
-	}); ok {
-		if err := receiver.Ack(msg); err != nil {
-			r.logger.Error("Failed to acknowledge message", zap.Error(err))
-		}
-	}
+	acknowledgeMessage(r, msg)
 }
 
 // Helper functions
@@ -383,4 +382,16 @@ func getTrustStorePath() string {
 		return path
 	}
 	return "truststore"
+}
+
+func acknowledgeMessage(r *Receiver, msg message.InboundMessage) {
+	if receiver, ok := r.QueueConsumer.(interface {
+		Ack(message.InboundMessage) error
+	}); ok {
+		if err := receiver.Ack(msg); err != nil {
+			r.logger.Error("Failed to acknowledge message", zap.Error(err))
+		}
+	} else {
+		r.logger.Warn("QueueConsumer does not implement Ack interface; message not acknowledged")
+	}
 }

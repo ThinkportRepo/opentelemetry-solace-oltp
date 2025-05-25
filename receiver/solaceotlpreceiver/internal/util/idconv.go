@@ -1,4 +1,4 @@
-package receiver
+package util
 
 import (
 	"encoding/hex"

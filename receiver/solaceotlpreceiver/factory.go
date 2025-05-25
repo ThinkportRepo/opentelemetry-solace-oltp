@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 
+	solaceconfig "github.com/ThinkportRepo/opentelemetry-solace-otlp/receiver/solaceotlpreceiver/config"
 	"go.opentelemetry.io/collector/component"
 	"go.opentelemetry.io/collector/consumer"
 	"go.opentelemetry.io/collector/receiver"
@@ -25,7 +26,7 @@ func NewFactory() receiver.Factory {
 
 // createDefaultConfig creates the default configuration for the receiver
 func createDefaultConfig() component.Config {
-	return &Config{
+	return &solaceconfig.Config{
 		Queue: "telemetry",
 	}
 }
@@ -41,7 +42,7 @@ func createTracesReceiver(
 		return nil, fmt.Errorf("nil consumer")
 	}
 
-	conf := cfg.(*Config)
+	conf := cfg.(*solaceconfig.Config)
 	receiver, err := NewReceiver(settings, conf, nil, consumer)
 	if err != nil {
 		return nil, err
@@ -60,7 +61,7 @@ func createLogsReceiver(
 		return nil, fmt.Errorf("nil consumer")
 	}
 
-	conf := cfg.(*Config)
+	conf := cfg.(*solaceconfig.Config)
 	receiver, err := NewReceiver(settings, conf, consumer, nil)
 	if err != nil {
 		return nil, err

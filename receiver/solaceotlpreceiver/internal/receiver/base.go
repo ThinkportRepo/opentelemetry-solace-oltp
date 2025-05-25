@@ -6,13 +6,13 @@ import (
 	"go.opentelemetry.io/collector/receiver"
 	"go.uber.org/zap"
 
-	"github.com/ThinkportRepo/opentelemetry-solace-otlp/receiver/solaceotlpreceiver"
+	solaceconfig "github.com/ThinkportRepo/opentelemetry-solace-otlp/receiver/solaceotlpreceiver/config"
 )
 
 // BaseReceiver contains common functionality for all receivers
 type BaseReceiver struct {
 	settings         receiver.Settings
-	config           *solaceotlpreceiver.Config
+	config           *solaceconfig.Config
 	logger           *zap.Logger
 	wg               sync.WaitGroup
 	messagingService interface{} // can be real SDK or mock
@@ -22,7 +22,7 @@ type BaseReceiver struct {
 // NewBaseReceiver creates a new base receiver
 func NewBaseReceiver(
 	settings receiver.Settings,
-	config *solaceotlpreceiver.Config,
+	config *solaceconfig.Config,
 	opts ...interface{},
 ) *BaseReceiver {
 	receiver := &BaseReceiver{
@@ -39,7 +39,7 @@ func NewBaseReceiver(
 }
 
 // GetConfig returns the receiver configuration
-func (r *BaseReceiver) GetConfig() *solaceotlpreceiver.Config {
+func (r *BaseReceiver) GetConfig() *solaceconfig.Config {
 	return r.config
 }
 

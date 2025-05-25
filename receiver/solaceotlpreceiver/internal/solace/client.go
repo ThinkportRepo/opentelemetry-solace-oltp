@@ -9,7 +9,7 @@ import (
 
 	"go.uber.org/zap"
 
-	solaceotlp "github.com/ThinkportRepo/opentelemetry-solace-otlp/receiver/solaceotlpreceiver/config"
+	solaceconfig "github.com/ThinkportRepo/opentelemetry-solace-otlp/receiver/solaceotlpreceiver/config"
 	"solace.dev/go/messaging"
 	"solace.dev/go/messaging/pkg/solace/config"
 	"solace.dev/go/messaging/pkg/solace/resource"
@@ -18,7 +18,7 @@ import (
 // Client represents a Solace client
 type Client struct {
 	logger           *zap.Logger
-	config           *solaceotlp.Config
+	config           *solaceconfig.Config
 	messagingService interface{}
 	queueConsumer    QueueConsumer
 	messageListener  MessageListener
@@ -27,7 +27,7 @@ type Client struct {
 }
 
 // NewClient creates a new Solace client
-func NewClient(logger *zap.Logger, config *solaceotlp.Config) *Client {
+func NewClient(logger *zap.Logger, config *solaceconfig.Config) *Client {
 	return &Client{
 		logger:   logger,
 		config:   config,

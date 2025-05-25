@@ -1,4 +1,4 @@
-package solaceotlpreceiver
+package config
 
 // Config defines configuration for the Solace OTLP receiver
 type Config struct {

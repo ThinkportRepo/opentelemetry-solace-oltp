@@ -5,6 +5,7 @@ import (
 	"encoding/base64"
 	"encoding/json"
 
+	"github.com/ThinkportRepo/opentelemetry-solace-otlp/receiver/solaceotlpreceiver/internal/util"
 	"go.opentelemetry.io/collector/consumer"
 	"go.opentelemetry.io/collector/pdata/pcommon"
 	"go.opentelemetry.io/collector/pdata/ptrace"
@@ -77,17 +78,17 @@ func (r *TracesReceiver) HandleMessage(msg message.InboundMessage) {
 		span := scopeSpans.Spans().AppendEmpty()
 
 		// Convert IDs
-		traceID, err := hexStringToTraceID(traceData.TraceID)
+		traceID, err := util.HexStringToTraceID(traceData.TraceID)
 		if err != nil {
 			r.logger.Error("Failed to convert trace ID", zap.Error(err))
 			return
 		}
-		spanID, err := hexStringToSpanID(traceData.SpanID)
+		spanID, err := util.HexStringToSpanID(traceData.SpanID)
 		if err != nil {
 			r.logger.Error("Failed to convert span ID", zap.Error(err))
 			return
 		}
-		parentSpanID, err := hexStringToSpanID(traceData.ParentSpanID)
+		parentSpanID, err := util.HexStringToSpanID(traceData.ParentSpanID)
 		if err != nil {
 			r.logger.Error("Failed to convert parent span ID", zap.Error(err))
 			return
