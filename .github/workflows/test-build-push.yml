@@ -1,33 +1,46 @@
-name: Build and Push Docker Image
-description: Build and push Docker image to GitHub Container Registry
+name: Test, Build and Push
+description: Test, Build and Push Docker image to GitHub Container Registry
 
 on:
   push:
+    branches: [ '**' ]
     tags: [ 'v*' ]
 
-env:
-  REGISTRY: ghcr.io
-  IMAGE_NAME: thinkportrepo/opentelemetry-solace-otlp
-
 jobs:
-  build-and-push-linux:
+  test:
     runs-on: ubuntu-latest
-    permissions:
-      contents: read
-      packages: write
-
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.20.10'
+          cache: true
+      - name: Run unit tests
+        run: |
+          cd receiver/solaceotlpreceiver
+          go test -v -coverprofile=coverage.out ./internal/receiver
 
+  build-and-push-linux:
+    if: startsWith(github.ref, 'refs/tags/v')
+    runs-on: ubuntu-latest
+    needs: test
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
       - name: Sync tags
         run: |
           git fetch --tags --force
           git tag -l | xargs git tag -d
           git fetch --tags
-
       - name: Get latest tag
         id: get_tag
         run: |
@@ -36,23 +49,19 @@ jobs:
           else
             echo "tag=dev" >> $GITHUB_OUTPUT
           fi
-
       - name: Set up Go
         uses: actions/setup-go@v5
         with:
           go-version: '1.20.10'
           cache: true
-
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
-
       - name: Log in to the Container registry
         uses: docker/login-action@v3
         with:
           registry: ${{ env.REGISTRY }}
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
-
       - name: Extract metadata (tags, labels) for Docker
         id: meta
         uses: docker/metadata-action@v5
@@ -61,12 +70,6 @@ jobs:
           tags: |
             type=raw,value=${{ steps.get_tag.outputs.tag }}
             type=raw,value=latest
-
-      - name: Run unit tests
-        run: |
-          cd receiver/solaceotlpreceiver
-          go test -v -coverprofile=coverage.out ./internal/receiver
-
       - name: Build and push Docker image (multiarch)
         uses: docker/build-push-action@v5
         with:
@@ -78,3 +81,6 @@ jobs:
           cache-from: type=gha
           cache-to: type=gha,mode=max
           file: collector/Dockerfile
+    env:
+      REGISTRY: ghcr.io
+      IMAGE_NAME: thinkportrepo/opentelemetry-solace-otlp
