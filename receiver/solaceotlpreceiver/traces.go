@@ -89,6 +89,7 @@ func (r *TracesReceiver) Start(ctx context.Context, host component.Host) error {
 	type queueConsumerBuilderIface interface {
 		WithMessageAutoAcknowledgement() queueConsumerBuilderIface
 		WithMessageListener(func(message.InboundMessage)) queueConsumerBuilderIface
+		WithClientName(string) queueConsumerBuilderIface
 		Build(resource.Queue) (interface{ Start() error }, error)
 	}
 	switch ms := r.messagingService.(type) {
@@ -110,6 +111,7 @@ func (r *TracesReceiver) Start(ctx context.Context, host component.Host) error {
 		queueConsumer, err := builder.
 			WithMessageAutoAcknowledgement().
 			WithMessageListener(r.HandleMessage).
+			WithClientName("trace").
 			Build(*resource.QueueDurableExclusive(r.config.Queue))
 		if err != nil {
 			return fmt.Errorf("failed to create queue consumer: %w", err)
@@ -132,6 +134,7 @@ func (r *TracesReceiver) Start(ctx context.Context, host component.Host) error {
 		queueConsumer, err := queueConsumerBuilder.
 			WithMessageAutoAcknowledgement().
 			WithMessageListener(r.HandleMessage).
+			WithClientName("trace-consumer").
 			Build(*resource.QueueDurableExclusive(r.config.Queue))
 		if err != nil {
 			return fmt.Errorf("failed to create queue consumer (mock): %w", err)
@@ -197,6 +200,7 @@ func (r *TracesReceiver) HandleMessage(msg message.InboundMessage) {
 	payload, ok := msg.GetPayloadAsBytes()
 	if !ok {
 		r.logger.Error("Failed to get message payload")
+		msg.Dispose()
 		return
 	}
 
@@ -205,6 +209,7 @@ func (r *TracesReceiver) HandleMessage(msg message.InboundMessage) {
 	otlpTraces := ptraceotlp.NewExportRequest()
 	if err := otlpTraces.UnmarshalProto(payload); err != nil {
 		r.logger.Error("Failed to unmarshal traces", zap.Error(err))
+		msg.Dispose()
 		return
 	}
 
@@ -212,9 +217,13 @@ func (r *TracesReceiver) HandleMessage(msg message.InboundMessage) {
 
 	if err := r.consumer.ConsumeTraces(context.Background(), otlpTraces.Traces()); err != nil {
 		r.logger.Error("Failed to consume traces", zap.Error(err))
-	} else {
-		r.logger.Info("Trace successfully passed to consumer!")
+		msg.Dispose()
+		return
 	}
+
+	// Nach erfolgreicher Verarbeitung die Nachricht bestätigen
+	msg.Dispose()
+	r.logger.Info("Message successfully acknowledged!")
 }
 
 // GetVPN returns the VPN configuration

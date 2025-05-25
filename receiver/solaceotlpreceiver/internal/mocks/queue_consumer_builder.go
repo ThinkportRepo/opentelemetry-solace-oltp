@@ -8,5 +8,6 @@ import (
 type QueueConsumerBuilder interface {
 	WithMessageAutoAcknowledgement() QueueConsumerBuilder
 	WithMessageListener(listener func(message.InboundMessage)) QueueConsumerBuilder
+	WithClientName(name string) QueueConsumerBuilder
 	Build(queue resource.Queue) (QueueConsumer, error)
 }

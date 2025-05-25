@@ -80,6 +80,7 @@ func (r *LogsReceiver) Start(ctx context.Context, host component.Host) error {
 	type queueConsumerBuilderIface interface {
 		WithMessageAutoAcknowledgement() queueConsumerBuilderIface
 		WithMessageListener(func(message.InboundMessage)) queueConsumerBuilderIface
+		WithClientName(string) queueConsumerBuilderIface
 		Build(resource.Queue) (interface{ Start() error }, error)
 	}
 	switch ms := r.messagingService.(type) {
@@ -99,6 +100,7 @@ func (r *LogsReceiver) Start(ctx context.Context, host component.Host) error {
 		queueConsumer, err := builder.
 			WithMessageAutoAcknowledgement().
 			WithMessageListener(r.HandleMessage).
+			WithClientName("log").
 			Build(*resource.QueueDurableExclusive(r.config.Queue))
 		if err != nil {
 			return fmt.Errorf("failed to create queue consumer: %w", err)
@@ -117,6 +119,7 @@ func (r *LogsReceiver) Start(ctx context.Context, host component.Host) error {
 		queueConsumer, err := queueConsumerBuilder.
 			WithMessageAutoAcknowledgement().
 			WithMessageListener(r.HandleMessage).
+			WithClientName("log-consumer").
 			Build(*resource.QueueDurableExclusive(r.config.Queue))
 		if err != nil {
 			return fmt.Errorf("failed to create queue consumer (mock): %w", err)
