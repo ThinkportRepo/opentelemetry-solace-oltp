@@ -1,4 +1,5 @@
 name: Build and Push Docker Image
+description: Build and push Docker image to GitHub Container Registry
 
 on:
   push:
@@ -63,7 +64,7 @@ jobs:
 
       - name: Build Docker image
         run: |
-          TAG=$(echo "${{ steps.meta.outputs.tags }}" | cut -d',' -f1)
+          TAG=$(echo "${{ steps.meta.outputs.tags }}" | head -n1)
           docker build -f collector/Dockerfile -t "$TAG" .
 
       - name: Build and push Docker image
