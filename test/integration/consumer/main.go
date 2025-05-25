@@ -17,7 +17,7 @@ import (
 func main() {
 	godotenv.Load(".env")
 
-	endpoint := os.Getenv("SOLACE_ENDPOINT")
+	endpoint := os.Getenv("SOLACE_HOST")
 	if endpoint == "" {
 		endpoint = os.Getenv("SOLACE_HOST")
 	}
@@ -25,7 +25,7 @@ func main() {
 	password := os.Getenv("SOLACE_PASSWORD")
 	vpn := os.Getenv("SOLACE_VPN")
 	queue := os.Getenv("SOLACE_QUEUE")
-	trustStore := os.Getenv("SESSION_SSL_TRUST_STORE_DIR")
+	trustStore := os.Getenv("SOLACE_TRUST_STORE_PATH")
 	if trustStore == "" {
 		trustStore = "truststore"
 	}

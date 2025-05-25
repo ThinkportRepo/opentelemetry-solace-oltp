@@ -1,6 +1,6 @@
 receivers:
   solaceotlp:
-    endpoint: ${SOLACE_ENDPOINT}
+    endpoint: ${SOLACE_HOST}
     queue: ${SOLACE_QUEUE}
     username: ${SOLACE_USERNAME}
     password: ${SOLACE_PASSWORD}

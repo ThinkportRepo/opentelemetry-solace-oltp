@@ -7,11 +7,12 @@ import (
 
 	"go.opentelemetry.io/collector/consumer"
 	"go.opentelemetry.io/collector/pdata/ptrace"
+	"go.opentelemetry.io/collector/pdata/ptrace/ptraceotlp"
 	"go.opentelemetry.io/collector/receiver"
 	"go.uber.org/zap"
 
 	"github.com/ThinkportRepo/opentelemetry-solace-otlp/receiver/solaceotlpreceiver/internal/base"
-	"github.com/ThinkportRepo/opentelemetry-solace-otlp/receiver/solaceotlpreceiver/internal/interfaces"
+	"github.com/ThinkportRepo/opentelemetry-solace-otlp/receiver/solaceotlpreceiver/internal/message"
 )
 
 // Receiver handles trace processing
@@ -33,27 +34,62 @@ func NewReceiver(
 }
 
 // HandleMessage processes incoming trace messages
-func (r *Receiver) HandleMessage(message interfaces.InboundMessage) {
+func (r *Receiver) HandleMessage(message message.InboundMessage) {
 	r.AddToWaitGroup()
 	defer r.DoneFromWaitGroup()
 
 	// Try to parse as base64-encoded OTLP Traces
-	if traces, err := r.parseBase64Traces(message.GetPayload()); err == nil {
-		if err := r.consumer.ConsumeTraces(context.Background(), traces); err != nil {
-			r.GetLogger().Error("Failed to consume traces", zap.Error(err))
+	if payload, ok := message.GetPayloadAsBytes(); ok {
+		// Try to parse as OTLP Trace directly first
+		otlpTraces := ptraceotlp.NewExportRequest()
+		if err := otlpTraces.UnmarshalProto(payload); err == nil {
+			if err := r.consumer.ConsumeTraces(context.Background(), otlpTraces.Traces()); err != nil {
+				r.GetLogger().Error("Failed to consume traces", zap.Error(err))
+			}
+			return
 		}
-		return
-	}
 
-	// Try to parse as JSON Traces
-	if traces, err := r.parseJSONTraces(message.GetPayload()); err == nil {
-		if err := r.consumer.ConsumeTraces(context.Background(), traces); err != nil {
-			r.GetLogger().Error("Failed to consume traces", zap.Error(err))
+		// Try base64 decoding
+		decoded, err := base64.StdEncoding.DecodeString(string(payload))
+		if err == nil {
+			// Try to parse decoded content as OTLP Trace
+			if err := otlpTraces.UnmarshalProto(decoded); err == nil {
+				if err := r.consumer.ConsumeTraces(context.Background(), otlpTraces.Traces()); err != nil {
+					r.GetLogger().Error("Failed to consume traces", zap.Error(err))
+				}
+				return
+			}
+
+			// Try to parse decoded content as JSON
+			if traces, err := r.parseJSONTraces(decoded); err == nil {
+				if err := r.consumer.ConsumeTraces(context.Background(), traces); err != nil {
+					r.GetLogger().Error("Failed to consume traces", zap.Error(err))
+				}
+				return
+			}
 		}
-		return
-	}
 
-	r.GetLogger().Warn("Failed to parse trace message", zap.ByteString("payload", message.GetPayload()))
+		// Try to parse as JSON Traces directly
+		if traces, err := r.parseJSONTraces(payload); err == nil {
+			if err := r.consumer.ConsumeTraces(context.Background(), traces); err != nil {
+				r.GetLogger().Error("Failed to consume traces", zap.Error(err))
+			}
+			return
+		}
+
+		// Log the first few bytes of the payload for debugging
+		r.GetLogger().Debug("Failed to parse trace message",
+			zap.ByteString("payload_start", payload[:min(32, len(payload))]),
+			zap.Int("payload_length", len(payload)))
+	}
+}
+
+// min returns the minimum of two integers
+func min(a, b int) int {
+	if a < b {
+		return a
+	}
+	return b
 }
 
 // parseBase64Traces attempts to parse base64-encoded OTLP traces
@@ -63,12 +99,12 @@ func (r *Receiver) parseBase64Traces(payload []byte) (ptrace.Traces, error) {
 		return ptrace.Traces{}, err
 	}
 
-	traces := ptrace.NewTraces()
-	if err := traces.UnmarshalProto(decoded); err != nil {
+	otlpTraces := ptraceotlp.NewExportRequest()
+	if err := otlpTraces.UnmarshalProto(decoded); err != nil {
 		return ptrace.Traces{}, err
 	}
 
-	return traces, nil
+	return otlpTraces.Traces(), nil
 }
 
 // parseJSONTraces attempts to parse JSON traces

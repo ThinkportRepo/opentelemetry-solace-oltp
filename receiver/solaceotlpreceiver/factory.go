@@ -41,8 +41,12 @@ func createTracesReceiver(
 		return nil, fmt.Errorf("nil consumer")
 	}
 
-	config := cfg.(*Config)
-	return NewReceiver(settings, config, nil, consumer)
+	conf := cfg.(*Config)
+	receiver, err := NewReceiver(settings, conf, nil, consumer)
+	if err != nil {
+		return nil, err
+	}
+	return receiver, nil
 }
 
 // createLogsReceiver creates a new logs receiver
@@ -56,6 +60,10 @@ func createLogsReceiver(
 		return nil, fmt.Errorf("nil consumer")
 	}
 
-	config := cfg.(*Config)
-	return NewReceiver(settings, config, consumer, nil)
+	conf := cfg.(*Config)
+	receiver, err := NewReceiver(settings, conf, consumer, nil)
+	if err != nil {
+		return nil, err
+	}
+	return receiver, nil
 }

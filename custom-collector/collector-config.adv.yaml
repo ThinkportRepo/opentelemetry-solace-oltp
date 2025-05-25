@@ -46,7 +46,9 @@ receivers:
         from: attributes.container_id
         to: resource.container.id
   solaceotlp:
-    endpoint: ${SOLACE_ENDPOINT}
+    host: ${SOLACE_HOST}
+    port: ${SOLACE_PORT}
+    ssl: ${SOLACE_SSL}
     queue: ${SOLACE_QUEUE}
     username: ${SOLACE_USERNAME}
     password: ${SOLACE_PASSWORD}
@@ -63,7 +65,7 @@ processors:
   resource:
     attributes:
       - key: host.name
-        value: solaccer
+        value: solace-otel-receiver-adv
         action: upsert
       - key: service.name
         value: otel-collector

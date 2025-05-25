@@ -19,7 +19,7 @@ go mod tidy
 
 Make sure your `.env` file contains the following variables:
 ```
-SOLACE_ENDPOINT=your_solace_endpoint
+SOLACE_HOST=your_solace_host
 ```
 
 ## Solace Configuration

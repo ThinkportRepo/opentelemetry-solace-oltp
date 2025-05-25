@@ -34,7 +34,7 @@ data:
       resource:
         attributes:
           - key: host.name
-            value: solaccer
+            value: solace-otel-receiver-k8s
             action: upsert
           - key: service.name
             value: otel-collector
