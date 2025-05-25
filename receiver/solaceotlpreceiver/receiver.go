@@ -29,7 +29,7 @@ import (
 	"go.opentelemetry.io/collector/receiver"
 )
 
-// Receiver implementiert den Receiver für Logs und Traces
+// Receiver implements the Receiver for Logs and Traces
 type Receiver struct {
 	logsConsumer     consumer.Logs
 	tracesConsumer   consumer.Traces
@@ -37,11 +37,11 @@ type Receiver struct {
 	config           *Config
 	logger           *zap.Logger
 	wg               sync.WaitGroup
-	messagingService interface{} // kann echtes SDK oder Mock sein
-	QueueConsumer    interface{} // speichert den verwendeten QueueConsumer
+	messagingService interface{} // can be real SDK or mock
+	QueueConsumer    interface{} // stores the used QueueConsumer
 }
 
-// NewReceiver erstellt einen neuen Receiver für Logs und Traces
+// NewReceiver creates a new Receiver for Logs and Traces
 func NewReceiver(
 	settings receiver.Settings,
 	config *Config,
@@ -68,13 +68,13 @@ func NewReceiver(
 	return receiver, nil
 }
 
-// Start startet den Receiver
+// Start starts the Receiver
 func (r *Receiver) Start(ctx context.Context, host component.Host) error {
 	r.logger.Info("Starting Solace OTLP receiver",
 		zap.String("endpoint", r.config.Endpoint),
 		zap.String("queue", r.config.Queue))
 
-	// MessagingService initialisieren (SDK oder Mock)
+	// MessagingService initialize (SDK or Mock)
 	if r.messagingService == nil {
 		ms, err := messaging.NewMessagingServiceBuilder().
 			FromConfigurationProvider(config.ServicePropertyMap{
@@ -180,7 +180,7 @@ func (r *Receiver) Start(ctx context.Context, host component.Host) error {
 	return nil
 }
 
-// Shutdown beendet den Receiver
+// Shutdown ends the Receiver
 func (r *Receiver) Shutdown(ctx context.Context) error {
 	r.logger.Info("Shutting down Solace OTLP receiver")
 	if r.QueueConsumer != nil {
@@ -196,22 +196,22 @@ func (r *Receiver) Shutdown(ctx context.Context) error {
 	return nil
 }
 
-// HandleMessage verarbeitet eine eingehende Nachricht
+// HandleMessage processes an incoming message
 func (r *Receiver) HandleMessage(msg message.InboundMessage) {
 	r.wg.Add(1)
 	defer r.wg.Done()
 
-	// Versuche zuerst als base64-kodierte OTLP Log zu parsen
+	// Try first as base64-encoded OTLP Log to parse
 	payloadStr, ok := msg.GetPayloadAsString()
 	if !ok {
 		r.logger.Error("Failed to get message payload")
 		return
 	}
 
-	// Versuche base64-Dekodierung
+	// Try base64-decoding
 	payload, err := base64.StdEncoding.DecodeString(payloadStr)
 	if err == nil {
-		// Versuche als OTLP Log zu parsen
+		// Try to parse as OTLP Log
 		otlpLogs := plogotlp.NewExportRequest()
 		if err := otlpLogs.UnmarshalProto(payload); err == nil {
 			if err := r.logsConsumer.ConsumeLogs(context.Background(), otlpLogs.Logs()); err != nil {
@@ -220,7 +220,7 @@ func (r *Receiver) HandleMessage(msg message.InboundMessage) {
 			return
 		}
 
-		// Versuche als OTLP Trace zu parsen
+		// Try to parse as OTLP Trace
 		otlpTraces := ptraceotlp.NewExportRequest()
 		if err := otlpTraces.UnmarshalProto(payload); err == nil {
 			if err := r.tracesConsumer.ConsumeTraces(context.Background(), otlpTraces.Traces()); err != nil {
@@ -230,7 +230,7 @@ func (r *Receiver) HandleMessage(msg message.InboundMessage) {
 		}
 	}
 
-	// Versuche als JSON Log zu parsen
+	// Try to parse as JSON Log
 	var logData struct {
 		TimeUnixNano         int64  `json:"time_unix_nano"`
 		ObservedTimeUnixNano int64  `json:"observed_time_unix_nano"`
@@ -295,7 +295,7 @@ func (r *Receiver) HandleMessage(msg message.InboundMessage) {
 		return
 	}
 
-	// Wenn kein Log, versuche als JSON Trace zu parsen
+	// If no Log, try to parse as JSON Trace
 	var traceData struct {
 		TraceID      string `json:"trace_id"`
 		SpanID       string `json:"span_id"`
@@ -365,7 +365,7 @@ func (r *Receiver) HandleMessage(msg message.InboundMessage) {
 	}
 }
 
-// Hilfsfunktionen
+// Helper functions
 func hexStringToTraceID(s string) (pcommon.TraceID, error) {
 	var traceID pcommon.TraceID
 	_, err := hex.Decode(traceID[:], []byte(s))
