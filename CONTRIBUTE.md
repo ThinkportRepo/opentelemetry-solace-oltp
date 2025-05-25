@@ -74,6 +74,7 @@ ocb --config builder-config.yaml
 The resulting binary will be available in the `./dist` directory.
 
 Note: If you want to use a specific version of the receiver, you need to:
+
 1. Create a release tag in the repository (e.g., v0.0.1)
 2. Update the version in the builder-config.yaml accordingly
 
@@ -82,31 +83,41 @@ Note: If you want to use a specific version of the receiver, you need to:
 The project includes a Makefile with the following tasks:
 
 ### Build
+
 ```bash
 make build
 ```
+
 Builds the OpenTelemetry Collector with the specified configuration in `builder-config.yaml`.
 
 ### Start
+
 ```bash
 make start
 ```
+
 Starts the OpenTelemetry Collector with the configuration from `collector-config.yaml`.
 
 ### Debug
+
 ```bash
 make debug
 ```
+
 Starts the OpenTelemetry Collector in debug mode with increased logging level.
 
 ### Test Spans
+
 ```bash
 make test-spans
 ```
+
 Sends test spans to the OpenTelemetry Collector using otel-cli. This is useful for testing the collector's trace reception capabilities.
 
 #### otel-cli Configuration
+
 The test spans are sent using the following configuration:
+
 - Protocol: gRPC
 - Endpoint: 0.0.0.0:4317
 - Service Name: test-service
@@ -115,6 +126,7 @@ The test spans are sent using the following configuration:
 - Attributes: test.attribute=value
 
 To install otel-cli:
+
 ```bash
 # macOS
 brew install otel-cli
@@ -125,6 +137,7 @@ sudo mv otel-cli /usr/local/bin/
 ```
 
 To send custom spans manually:
+
 ```bash
 otel-cli span \
   --service "your-service" \
@@ -136,6 +149,20 @@ otel-cli span \
   --attrs "key=value"
 ```
 
+## Automated Releases with release-please
+
+This project uses [release-please](https://github.com/googleapis/release-please) to automate the release process. release-please analyzes commit messages (following the Conventional Commits specification) to determine the type of changes (features, fixes, breaking changes) and automatically manages versioning and changelog updates.
+
+How it works:
+
+- When changes are merged into the main branch, release-please creates a pull request proposing a new release. This PR includes:
+  - An updated version in relevant files (according to semantic versioning)
+  - An updated `CHANGELOG.md` summarizing the changes since the last release
+- Once the release PR is merged, release-please creates a new GitHub release, tags the commit, and publishes the release notes.
+- The configuration for release-please can be found in `release-please-config.json`.
+
+This automation helps to standardize and simplify the release workflow for all contributors.
+
 ## License
 
-This project is licensed under the GNU GENERAL PUBLIC LICENSE License - see the [LICENSE](LICENSE) file for details. 
+This project is licensed under the GNU GENERAL PUBLIC LICENSE License - see the [LICENSE](LICENSE) file for details.
