@@ -1,5 +1,7 @@
 # OpenTelemetry Solace OTLP
 
+![GitHub Release Date](https://img.shields.io/github/release-date/thinkportrepo/opentelemetry-solace-otlp)
+
 This project is a custom OpenTelemetry Collector with a receiver for Solace with OTLP data. 
 It supports logs and traces.
 
