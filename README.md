@@ -53,6 +53,14 @@ The receiver supports the following message formats for both traces and logs:
 
 The receiver will automatically detect and parse the appropriate format based on the message content.
 
+## Examples
+
+You can find example configurations and usage in the [examples](./examples) directory:
+
+- [Kubernetes Example](./examples/k8s/)
+- [Logs Example](./examples/logs/)
+- [Traces Example](./examples/traces/)
+
 ## Contributing
 
 Please read [CONTRIBUTE.md](CONTRIBUTE.md) for details on our code of conduct and the process for submitting pull requests.

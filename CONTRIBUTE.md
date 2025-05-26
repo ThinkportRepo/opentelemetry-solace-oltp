@@ -109,7 +109,7 @@ Starts the OpenTelemetry Collector in debug mode with increased logging level.
 ### Test Spans
 
 ```bash
-make test-spans
+make otel-test-spans
 ```
 
 Sends test spans to the OpenTelemetry Collector using otel-cli. This is useful for testing the collector's trace reception capabilities.

@@ -1,4 +1,4 @@
-.PHONY: build start debug docker-build docker-build-local docker-push version-major version-minor version-patch test-spans stop check help kill generate-mocks test print-env
+.PHONY: build start debug docker-build docker-push version-major version-minor version-patch otel-test-spans stop check help kill test
 
 # Colors for output
 BLUE := \033[0;34m
@@ -23,16 +23,14 @@ help:
 	@echo "${GREEN}debug${NC}              - Start OpenTelemetry Collector in debug mode"
 	@echo "${GREEN}stop${NC}               - Stop OpenTelemetry Collector"
 	@echo "${GREEN}check${NC}              - Check if required ports are available"
-	@echo "${GREEN}test-spans${NC}         - Send test spans"
+	@echo "${GREEN}kill${NC}               - Kill processes on ports 4317 and 4318"
 	@echo "${GREEN}docker-build${NC}       - Build Docker image for Linux AMD64"
-	@echo "${GREEN}docker-build-local${NC} - Build Docker image for Mac ARM64"
 	@echo "${GREEN}docker-push${NC}        - Push Docker image"
+	@echo "${GREEN}otel-test-spans${NC}    - Send test spans"
+	@echo "${GREEN}test${NC}               - Run Go-Tests"
 	@echo "${GREEN}version-major${NC}      - Increment major version"
 	@echo "${GREEN}version-minor${NC}      - Increment minor version"
 	@echo "${GREEN}version-patch${NC}      - Increment patch version"
-	@echo "${GREEN}generate-mocks${NC}     - Generate mocks for tests"
-	@echo "${GREEN}test${NC}               - Run Go-Tests"
-	@echo "${GREEN}print-env${NC}           - Print environment variables"
 
 version-major:
 	@echo "${BLUE}Current version:${NC} $(CURRENT_VERSION)"
@@ -90,19 +88,14 @@ docker-build:
 	@docker build -t ghcr.io/thinkportrepo/opentelemetry-receiver-solace:latest -f collector/Dockerfile .
 	@echo "${GREEN}Docker build completed${NC}"
 
-# Build Docker image for Mac ARM64 (local development)
-docker-build-local:
-	@echo "${BLUE}Building Docker image for Mac ARM64 … ${NC}"
-	@docker build -t ghcr.io/thinkportrepo/opentelemetry-receiver-solace:local -f collector/Dockerfile .
-	@echo "${GREEN}Docker build completed${NC}"
-
+# Push Docker image to GitHub Container Registry
 docker-push:
 	@echo "${BLUE}Pushing Docker image…${NC}"
 	@docker push ghcr.io/thinkportrepo/opentelemetry-receiver-solace:latest
 	@echo "${GREEN}Docker push completed${NC}"
 
 # Send test spans using otel-cli
-test-spans:
+otel-test-spans:
 	@echo "${BLUE}Starting test span generator … ${NC}"
 	@while true; do \
 		printf "${YELLOW}Sending test span …${NC}"; \
@@ -143,23 +136,7 @@ kill:
 	-lsof -ti :4318 | xargs -r kill -9
 	@echo "Done."
 
-generate-mocks:
-	go install github.com/golang/mock/mockgen@v1.6.0
-	mockgen -source=receiver/solaceotlpreceiver/internal/mocks/messaging_service.go -destination=receiver/solaceotlpreceiver/internal/mocks/mock_messaging_service.go -package=mocks
-	mockgen -source=receiver/solaceotlpreceiver/internal/mocks/queue_consumer.go -destination=receiver/solaceotlpreceiver/internal/mocks/mock_queue_consumer.go -package=mocks
-	mockgen -source=receiver/solaceotlpreceiver/internal/mocks/queue_consumer_builder.go -destination=receiver/solaceotlpreceiver/internal/mocks/mock_queue_consumer_builder.go -package=mocks
-	mockgen -source=receiver/solaceotlpreceiver/internal/interfaces/inbound_message.go -destination=receiver/solaceotlpreceiver/internal/mocks/mock_inbound_message.go -package=mocks
-
 test:
 	@echo "${BLUE}Running Go-Tests … ${NC}"
 	@go test ./... -v
 	@echo "${GREEN}Tests abgeschlossen${NC}"
-
-print-env:
-	@echo "SOLACE_HOST=$(SOLACE_HOST)"
-	@echo "SOLACE_QUEUE=$(SOLACE_QUEUE)"
-	@echo "SOLACE_USERNAME=$(SOLACE_USERNAME)"
-	@echo "SOLACE_PASSWORD=$(SOLACE_PASSWORD)"
-	@echo "SOLACE_VPN=$(SOLACE_VPN)"
-	@echo "DD_SITE=$(DD_SITE)"
-	@echo "DD_API_KEY=$(DD_API_KEY)"
