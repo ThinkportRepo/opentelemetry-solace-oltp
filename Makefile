@@ -137,6 +137,8 @@ kill:
 	@echo "Done."
 
 test:
-	@echo "${BLUE}Running Go-Tests … ${NC}"
+	@echo "${BLUE}Running Go-Tests in main module … ${NC}"
 	@go test ./... -v
+	@echo "${BLUE}Running Go-Tests in submodul receiver/solaceotlpreceiver … ${NC}"
+	@cd receiver/solaceotlpreceiver && go test ./... -v
 	@echo "${GREEN}Tests abgeschlossen${NC}"
