@@ -1,8 +1,8 @@
 # OpenTelemetry Solace OTLP
 
-![GitHub Release Date](https://img.shields.io/github/release-date/thinkportrepo/opentelemetry-solace-otlp)
-![GitHub commits since latest release (branch)](https://img.shields.io/github/commits-since/thinkportrepo/opentelemetry-solace-otlp/latest/main)
-![GitHub contributors](https://img.shields.io/github/contributors/thinkportrepo/opentelemetry-solace-otlp)
+![GitHub Release Date](https://img.shields.io/github/release-date/ThinkportRepo/opentelemetry-solace-otlp)
+![GitHub commits since latest release (branch)](https://img.shields.io/github/commits-since/ThinkportRepo/opentelemetry-solace-otlp/latest/main)
+![GitHub contributors](https://img.shields.io/github/contributors/ThinkportRepo/opentelemetry-solace-otlp)
 
 
 This project is a custom OpenTelemetry Collector with a receiver for Solace with OTLP data. 
